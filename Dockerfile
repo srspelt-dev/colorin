@@ -22,7 +22,7 @@ COPY --from=frontend-builder /frontend/dist ./frontend_dist
 
 RUN mkdir -p /app/data && chmod 777 /app/data
 
-EXPOSE 8000
+EXPOSE 9137
 
-CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-12052}"]
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-9137}"]
 
