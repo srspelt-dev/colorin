@@ -1170,32 +1170,45 @@ export default function Eventos() {
             {evento.notas && (
               <p className="evento-notas">{evento.notas}</p>
             )}
-            {evento.profesoresAsignados && evento.profesoresAsignados.length > 0 ? (
-              <div className="evento-asignaciones" onClick={(e) => e.stopPropagation()}>
-                <strong>👥 Profesores asignados ({evento.profesoresAsignados.length}):</strong>
-                <div className="profesores-nombres">
-                  {evento.profesoresAsignados.map((profesor) => (
-                    <span key={profesor.asignacion_id} className="profesor-nombre-badge">
-                      {profesor.nombre}
-                      <button
-                        className="btn-eliminar-profesor"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          eliminarAsignacion(profesor.asignacion_id, profesor.nombre);
-                        }}
-                        title={`Quitar a ${profesor.nombre} del evento`}
-                      >
-                        ✕
-                      </button>
+            {(() => {
+              const profesoresAsignados = evento.profesoresAsignados?.length || 0;
+              const cantidadNecesaria = evento.cantidad_profes || 1;
+              const faltanProfesores = profesoresAsignados < cantidadNecesaria;
+              
+              return (
+                <div className={`evento-asignaciones ${faltanProfesores ? 'faltan-profesores' : ''}`} onClick={(e) => e.stopPropagation()}>
+                  <div className="evento-profesores-header">
+                    <strong>👥 Profesores asignados: {profesoresAsignados}</strong>
+                    <span className={`cantidad-profes-badge-resumen ${faltanProfesores ? 'insuficiente' : 'suficiente'}`}>
+                      {faltanProfesores ? (
+                        <span className="alerta-profesores">⚠️ Faltan {cantidadNecesaria - profesoresAsignados} de {cantidadNecesaria}</span>
+                      ) : (
+                        <span className="ok-profesores">✓ {profesoresAsignados}/{cantidadNecesaria}</span>
+                      )}
                     </span>
-                  ))}
+                  </div>
+                  {evento.profesoresAsignados && evento.profesoresAsignados.length > 0 && (
+                    <div className="profesores-nombres">
+                      {evento.profesoresAsignados.map((profesor) => (
+                        <span key={profesor.asignacion_id} className="profesor-nombre-badge">
+                          {profesor.nombre}
+                          <button
+                            className="btn-eliminar-profesor"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              eliminarAsignacion(profesor.asignacion_id, profesor.nombre);
+                            }}
+                            title={`Quitar a ${profesor.nombre} del evento`}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ) : (
-              <div className="evento-asignaciones">
-                <strong>Profesores asignados: 0</strong>
-              </div>
-            )}
+              );
+            })()}
             <div className="evento-actions" onClick={(e) => e.stopPropagation()}>
               <button
                 className="btn btn-sm btn-primary"
