@@ -1,25 +1,22 @@
 """
 Script para crear el usuario administrador inicial
-Ejecutar una vez después de crear las tablas
+Ejecutar: python create_admin.py o docker compose exec api python create_admin.py
 """
-from database import SessionLocal
+import database
 import models
 import auth
-
-db = SessionLocal()
+from datetime import datetime
 
 try:
-    # Verificar si ya existe un usuario
-    existing_user = db.query(models.Usuario).first()
-    if existing_user:
-        print("❌ Ya existe un usuario. No se puede crear otro.")
-        print(f"   Usuario existente: {existing_user.username}")
-        exit(1)
+    # Obtener la base de datos
+    db = database.get_database()
+    usuarios_collection = db[models.COLLECTION_USUARIOS]
     
     print("=" * 50)
     print("Crear Usuario Administrador")
     print("=" * 50)
     
+    # Pedir datos del usuario
     username = input("Usuario (admin): ").strip() or "admin"
     email = input("Email: ").strip()
     if not email:
@@ -32,38 +29,40 @@ try:
         exit(1)
     
     # Verificar si el username ya existe
-    if db.query(models.Usuario).filter(models.Usuario.username == username).first():
+    if usuarios_collection.find_one({"username": username}):
         print(f"❌ El usuario '{username}' ya existe")
         exit(1)
     
     # Verificar si el email ya existe
-    if db.query(models.Usuario).filter(models.Usuario.email == email).first():
+    if usuarios_collection.find_one({"email": email}):
         print(f"❌ El email '{email}' ya está registrado")
         exit(1)
     
     # Crear usuario
     hashed_password = auth.get_password_hash(password)
-    db_user = models.Usuario(
+    nuevo_usuario = models.Usuario.create(
         username=username,
         email=email,
         hashed_password=hashed_password,
         activo=True,
         es_admin=True
     )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
+    
+    # Insertar en MongoDB
+    result = usuarios_collection.insert_one(nuevo_usuario)
     
     print("\n" + "=" * 50)
     print("✅ Usuario administrador creado exitosamente!")
     print("=" * 50)
-    print(f"\nUsuario: {db_user.username}")
-    print(f"Email: {db_user.email}")
+    print(f"\nUsuario: {username}")
+    print(f"Email: {email}")
+    print(f"ID: {result.inserted_id}")
     print(f"\nAhora puedes iniciar sesión en el frontend con estas credenciales.")
     
 except Exception as e:
-    db.rollback()
     print(f"❌ Error: {e}")
+    import traceback
+    traceback.print_exc()
 finally:
-    db.close()
+    database.close_database()
 

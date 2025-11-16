@@ -21,7 +21,7 @@ class ProfesorUpdate(BaseModel):
 
 
 class Profesor(ProfesorBase):
-    id: int
+    id: str
     
     class Config:
         from_attributes = True
@@ -56,7 +56,7 @@ class EventoUpdate(BaseModel):
 
 
 class Evento(EventoBase):
-    id: int
+    id: str
     
     class Config:
         from_attributes = True
@@ -65,8 +65,8 @@ class Evento(EventoBase):
 # ========== SCHEMAS DE ASIGNACION ==========
 
 class AsignacionBase(BaseModel):
-    profesor_id: int
-    evento_id: int
+    profesor_id: str
+    evento_id: str
     rol: str = "Profesor"
 
 
@@ -75,7 +75,7 @@ class AsignacionCreate(AsignacionBase):
 
 
 class Asignacion(AsignacionBase):
-    id: int
+    id: str
     
     class Config:
         from_attributes = True
@@ -98,7 +98,7 @@ class UsuarioLogin(BaseModel):
 
 
 class Usuario(UsuarioBase):
-    id: int
+    id: str
     activo: bool
     es_admin: bool
     creado_en: datetime
@@ -128,6 +128,7 @@ class TareaBase(BaseModel):
     descripcion: Optional[str] = None
     fecha_vencimiento: Optional[date] = None
     prioridad: str = "media"
+    usuario_id: Optional[str] = None
 
 
 class TareaCreate(TareaBase):
@@ -143,7 +144,7 @@ class TareaUpdate(BaseModel):
 
 
 class Tarea(TareaBase):
-    id: int
+    id: str
     completada: bool
     creada_en: datetime
     completada_en: Optional[datetime] = None
@@ -159,7 +160,7 @@ class TareaEventoBase(BaseModel):
 
 
 class TareaEventoCreate(TareaEventoBase):
-    evento_id: int
+    evento_id: str
 
 
 class TareaEventoUpdate(BaseModel):
@@ -168,8 +169,8 @@ class TareaEventoUpdate(BaseModel):
 
 
 class TareaEvento(TareaEventoBase):
-    id: int
-    evento_id: int
+    id: str
+    evento_id: str
     completada: bool
     creada_en: datetime
     completada_en: Optional[datetime] = None

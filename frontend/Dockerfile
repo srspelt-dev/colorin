@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -12,5 +12,5 @@ COPY . .
 EXPOSE 61234
 
 # Ejecutar Vite en modo desarrollo accesible externamente
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "61234"]
+CMD ["npm", "run", "dev"]
 

@@ -5,9 +5,11 @@ services:
       - "9137:9137"
     volumes:
       - .:/app
-      - ./data:/app/data
     environment:
-      - DATABASE_PATH=/app/data/colorin.db
+      - MONGODB_USERNAME=colorin
+      - MONGODB_PASSWORD=facilito!23
+      - MONGODB_CLUSTER=colorin.uukmsjh.mongodb.net
+      - MONGODB_DB_NAME=colorin
       - PORT=9137
     working_dir: /app
     restart: unless-stopped
@@ -18,16 +20,8 @@ services:
     build:
       context: ./frontend
     ports:
-      - "61234:5173"
+      - "61234:61234"
     environment:
       - VITE_API_URL=http://localhost:9137
-    volumes:
-      - ./frontend:/app
-      - frontend_node_modules:/app/node_modules
-    command: >
-      sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 5173"
     depends_on:
       - api
-
-volumes:
-  frontend_node_modules:

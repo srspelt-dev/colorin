@@ -4,7 +4,6 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from sqlalchemy.orm import Session
 import models
 import database
 
@@ -39,29 +38,39 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 
-def authenticate_user(db: Session, username: str, password: str):
+def authenticate_user(username: str, password: str):
     """Autenticar usuario"""
-    user = db.query(models.Usuario).filter(models.Usuario.username == username).first()
-    if not user:
+    db = database.get_database()
+    usuarios_collection = db[models.COLLECTION_USUARIOS]
+    
+    user_doc = usuarios_collection.find_one({"username": username})
+    if not user_doc:
         return False
-    if not verify_password(password, user.hashed_password):
+    
+    if not verify_password(password, user_doc["hashed_password"]):
         return False
-    if not user.activo:
+    
+    if not user_doc.get("activo", True):
         return False
-    return user
+    
+    # Convertir a dict con id como string para compatibilidad
+    user = models.Usuario.to_dict(user_doc)
+    # Crear un objeto tipo dict que se pueda usar como antes
+    class UserDict:
+        def __init__(self, data):
+            for key, value in data.items():
+                setattr(self, key, value)
+    
+    return UserDict(user)
 
 
 def get_db():
-    """Dependencia para obtener la sesión de base de datos"""
-    db = database.SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    """Dependencia para obtener la base de datos de MongoDB"""
+    return database.get_database()
+
 
 async def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
+    token: str = Depends(oauth2_scheme)
 ):
     """Obtener usuario actual desde token"""
     credentials_exception = HTTPException(
@@ -77,14 +86,25 @@ async def get_current_user(
     except JWTError:
         raise credentials_exception
     
-    user = db.query(models.Usuario).filter(models.Usuario.username == username).first()
-    if user is None:
+    db = database.get_database()
+    usuarios_collection = db[models.COLLECTION_USUARIOS]
+    user_doc = usuarios_collection.find_one({"username": username})
+    
+    if user_doc is None:
         raise credentials_exception
-    return user
+    
+    user = models.Usuario.to_dict(user_doc)
+    # Crear un objeto tipo dict que se pueda usar como antes
+    class UserDict:
+        def __init__(self, data):
+            for key, value in data.items():
+                setattr(self, key, value)
+    
+    return UserDict(user)
 
 
 async def get_current_active_admin(
-    current_user: models.Usuario = Depends(get_current_user)
+    current_user = Depends(get_current_user)
 ):
     """Verificar que el usuario es admin activo"""
     if not current_user.activo:
@@ -92,4 +112,3 @@ async def get_current_active_admin(
     if not current_user.es_admin:
         raise HTTPException(status_code=403, detail="No tienes permisos de administrador")
     return current_user
-
