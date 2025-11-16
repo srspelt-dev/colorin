@@ -78,7 +78,8 @@ class Evento:
     @staticmethod
     def create(nombre: str, fecha, tipo: str, ubicacion: Optional[str] = None,
                horario_colorin: Optional[str] = None, horario_cumpleanos: Optional[str] = None,
-               actividad: Optional[list] = None, notas: Optional[str] = None) -> Dict[str, Any]:
+               actividad: Optional[list] = None, notas: Optional[str] = None,
+               cantidad_profes: Optional[int] = 1) -> Dict[str, Any]:
         """Crear un documento de evento"""
         return {
             "nombre": nombre,
@@ -88,7 +89,8 @@ class Evento:
             "horario_colorin": horario_colorin,
             "horario_cumpleanos": horario_cumpleanos,
             "actividad": actividad or [],
-            "notas": notas
+            "notas": notas,
+            "cantidad_profes": cantidad_profes or 1
         }
     
     @staticmethod

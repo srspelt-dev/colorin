@@ -58,7 +58,12 @@ export default function Profesores() {
         })
       );
       
-      setProfesores(profesoresConEventos);
+      // Ordenar profesores alfabéticamente por nombre
+      const profesoresOrdenados = profesoresConEventos.sort((a, b) => 
+        a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' })
+      );
+      
+      setProfesores(profesoresOrdenados);
     } catch (error) {
       console.error('Error cargando profesores:', error);
       alert('Error al cargar profesores');
@@ -106,6 +111,10 @@ export default function Profesores() {
     return <div className="loading">Cargando profesores...</div>;
   }
 
+  const totalProfesores = profesores.length;
+  const profesoresActivos = profesores.filter(p => p.activo).length;
+  const profesoresInactivos = profesores.filter(p => !p.activo).length;
+
   return (
     <div className="profesores-page">
       <div className="page-header">
@@ -120,6 +129,31 @@ export default function Profesores() {
         >
           {showForm ? '❌ Cancelar' : '➕ Agregar Profesor'}
         </button>
+      </div>
+
+      {/* Estadísticas de profesores */}
+      <div className="profesores-stats-container">
+        <div className="stat-card">
+          <div className="stat-icon">👥</div>
+          <div className="stat-content">
+            <div className="stat-label">Total de Profesores</div>
+            <div className="stat-number">{totalProfesores}</div>
+          </div>
+        </div>
+        <div className="stat-card success">
+          <div className="stat-icon">✅</div>
+          <div className="stat-content">
+            <div className="stat-label">Activos</div>
+            <div className="stat-number">{profesoresActivos}</div>
+          </div>
+        </div>
+        <div className="stat-card secondary">
+          <div className="stat-icon">⏸️</div>
+          <div className="stat-content">
+            <div className="stat-label">Inactivos</div>
+            <div className="stat-number">{profesoresInactivos}</div>
+          </div>
+        </div>
       </div>
 
       {showForm && (

@@ -278,15 +278,19 @@ def crear_evento(
     db = database.get_database()
     eventos_collection = db[models.COLLECTION_EVENTOS]
     
+    # Convertir fecha a string si es un objeto date
+    fecha_str = evento.fecha.isoformat() if isinstance(evento.fecha, date) else evento.fecha
+    
     evento_doc = models.Evento.create(
         nombre=evento.nombre,
-        fecha=evento.fecha,
+        fecha=fecha_str,
         tipo=evento.tipo,
         ubicacion=evento.ubicacion,
         horario_colorin=evento.horario_colorin,
         horario_cumpleanos=evento.horario_cumpleanos,
         actividad=evento.actividad,
-        notas=evento.notas
+        notas=evento.notas,
+        cantidad_profes=evento.cantidad_profes
     )
     result = eventos_collection.insert_one(evento_doc)
     evento_doc["_id"] = result.inserted_id
@@ -347,7 +351,9 @@ def actualizar_evento(evento_id: str, evento: schemas.EventoUpdate, current_user
     if evento.nombre is not None:
         update_data["nombre"] = evento.nombre
     if evento.fecha is not None:
-        update_data["fecha"] = evento.fecha
+        # Convertir fecha a string si es un objeto date
+        fecha_str = evento.fecha.isoformat() if isinstance(evento.fecha, date) else evento.fecha
+        update_data["fecha"] = fecha_str
     if evento.tipo is not None:
         update_data["tipo"] = evento.tipo
     if evento.ubicacion is not None:
@@ -360,6 +366,8 @@ def actualizar_evento(evento_id: str, evento: schemas.EventoUpdate, current_user
         update_data["actividad"] = evento.actividad or []
     if evento.notas is not None:
         update_data["notas"] = evento.notas
+    if evento.cantidad_profes is not None:
+        update_data["cantidad_profes"] = evento.cantidad_profes
     
     if update_data:
         eventos_collection.update_one({"_id": evento_id_obj}, {"$set": update_data})

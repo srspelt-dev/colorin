@@ -38,6 +38,7 @@ class EventoBase(BaseModel):
     horario_cumpleanos: Optional[str] = None  # Horario de Cumpleaños (ej: "14:00", "2:00 PM")
     actividad: Optional[List[str]] = None  # Actividades del evento como lista (ej: ["Slime", "Mini cheffs"])
     notas: Optional[str] = None
+    cantidad_profes: Optional[int] = 1  # Cantidad de profesores solicitados para el evento
 
 
 class EventoCreate(EventoBase):
@@ -53,6 +54,7 @@ class EventoUpdate(BaseModel):
     horario_cumpleanos: Optional[str] = None
     actividad: Optional[List[str]] = None
     notas: Optional[str] = None
+    cantidad_profes: Optional[int] = None
 
 
 class Evento(EventoBase):

@@ -30,6 +30,7 @@ export default function Eventos() {
     horario_cumpleanos: '',
     actividad: [],
     notas: '',
+    cantidad_profes: 1,
   });
   const [actividadPersonalizada, setActividadPersonalizada] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -37,6 +38,8 @@ export default function Eventos() {
   const [cargandoTareas, setCargandoTareas] = useState(false);
   const [nuevaTareaDescripcion, setNuevaTareaDescripcion] = useState('');
   const [mostrarFormTarea, setMostrarFormTarea] = useState(false);
+  const [tareasFormulario, setTareasFormulario] = useState([]); // Tareas temporales en el formulario
+  const [nuevaTareaFormulario, setNuevaTareaFormulario] = useState(''); // Nueva tarea en el formulario
   const [asignacionModal, setAsignacionModal] = useState(null);
   const [asignacionManualModal, setAsignacionManualModal] = useState(null);
   const [cantidadProfes, setCantidadProfes] = useState(1);
@@ -50,6 +53,21 @@ export default function Eventos() {
   useEffect(() => {
     cargarEventos();
   }, []);
+
+  // Función para calcular horario de Colorín (una hora antes del cumpleaños)
+  const calcularHorarioColorin = (horarioCumpleanos) => {
+    if (!horarioCumpleanos || !horarioCumpleanos.includes(':')) return '';
+    
+    const [horas, minutos] = horarioCumpleanos.split(':').map(Number);
+    let horaColorin = horas - 1;
+    
+    // Si la hora es 0 (medianoche), vuelve a 23 (11 PM del día anterior)
+    if (horaColorin < 0) {
+      horaColorin = 23;
+    }
+    
+    return `${horaColorin.toString().padStart(2, '0')}:${minutos.toString().padStart(2, '0')}`;
+  };
 
   const cargarEventos = async () => {
     try {
@@ -105,11 +123,24 @@ export default function Eventos() {
         ...formData,
         fecha: formData.fecha,
       };
+      let eventoId;
       if (editingId) {
         await eventosAPI.actualizar(editingId, data);
+        eventoId = editingId;
       } else {
-        await eventosAPI.crear(data);
+        const response = await eventosAPI.crear(data);
+        eventoId = response.data.id;
       }
+      
+      // Crear las tareas del formulario
+      if (tareasFormulario.length > 0) {
+        await Promise.all(
+          tareasFormulario.map(tarea => 
+            tareasEventoAPI.crear(eventoId, { descripcion: tarea })
+          )
+        );
+      }
+      
       setShowForm(false);
       setFormData({
         nombre: '',
@@ -120,8 +151,11 @@ export default function Eventos() {
         horario_cumpleanos: '',
         actividad: [],
         notas: '',
+        cantidad_profes: 1,
       });
       setActividadPersonalizada('');
+      setTareasFormulario([]);
+      setNuevaTareaFormulario('');
       setEditingId(null);
       cargarEventos();
     } catch (error) {
@@ -171,10 +205,37 @@ export default function Eventos() {
       horario_cumpleanos: evento.horario_cumpleanos || '',
       actividad: actividadArray,
       notas: evento.notas || '',
+      cantidad_profes: evento.cantidad_profes || 1,
     });
     setActividadPersonalizada(textoOtros);
     setEditingId(evento.id);
+    
+    // Cargar tareas existentes del evento
+    cargarTareasParaEdicion(evento.id);
+    
     setShowForm(true);
+  };
+
+  const cargarTareasParaEdicion = async (eventoId) => {
+    try {
+      const response = await tareasEventoAPI.listar(eventoId);
+      const tareas = response.data.map(t => t.descripcion);
+      setTareasFormulario(tareas);
+    } catch (error) {
+      console.error('Error cargando tareas para edición:', error);
+      setTareasFormulario([]);
+    }
+  };
+
+  const agregarTareaFormulario = () => {
+    if (nuevaTareaFormulario.trim()) {
+      setTareasFormulario([...tareasFormulario, nuevaTareaFormulario.trim()]);
+      setNuevaTareaFormulario('');
+    }
+  };
+
+  const eliminarTareaFormulario = (index) => {
+    setTareasFormulario(tareasFormulario.filter((_, i) => i !== index));
   };
 
   const toggleActividad = (actividad) => {
@@ -529,8 +590,11 @@ export default function Eventos() {
                     horario_cumpleanos: '',
                     actividad: [],
                     notas: '',
+                    cantidad_profes: 1,
                   });
                   setActividadPersonalizada('');
+                  setTareasFormulario([]);
+                  setNuevaTareaFormulario('');
                 }}
               >
                 ✕
@@ -704,13 +768,73 @@ export default function Eventos() {
                     const horas = partes[0].padStart(2, '0').slice(0, 2);
                     const minutos = partes[1] ? partes[1].padEnd(2, '0').slice(0, 2) : '00';
                     if (parseInt(horas) <= 23 && parseInt(minutos) <= 59) {
-                      setFormData({ ...formData, horario_cumpleanos: `${horas}:${minutos}` });
+                      const horarioCumpleanos = `${horas}:${minutos}`;
+                      const horarioColorin = calcularHorarioColorin(horarioCumpleanos);
+                      setFormData({ 
+                        ...formData, 
+                        horario_cumpleanos: horarioCumpleanos,
+                        horario_colorin: horarioColorin
+                      });
                     }
                   }
                 }}
                 placeholder="HH:MM (ej: 14:30)"
                 pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
               />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Cantidad de Profes:</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.cantidad_profes}
+              onChange={(e) => setFormData({ ...formData, cantidad_profes: parseInt(e.target.value) || 1 })}
+              placeholder="Ej: 2"
+            />
+          </div>
+          <div className="form-group">
+            <label>Tareas del Evento:</label>
+            <div className="tareas-formulario-container">
+              <div className="tareas-formulario-input">
+                <input
+                  type="text"
+                  value={nuevaTareaFormulario}
+                  onChange={(e) => setNuevaTareaFormulario(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      agregarTareaFormulario();
+                    }
+                  }}
+                  placeholder="Escribe una tarea y presiona Enter o haz clic en ➕"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={agregarTareaFormulario}
+                  disabled={!nuevaTareaFormulario.trim()}
+                >
+                  ➕ Agregar
+                </button>
+              </div>
+              {tareasFormulario.length > 0 && (
+                <div className="tareas-formulario-lista">
+                  {tareasFormulario.map((tarea, index) => (
+                    <div key={index} className="tarea-formulario-item">
+                      <span className="tarea-formulario-texto">✓ {tarea}</span>
+                      <button
+                        type="button"
+                        className="btn-eliminar-tarea"
+                        onClick={() => eliminarTareaFormulario(index)}
+                        title="Eliminar tarea"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="form-group">
@@ -923,13 +1047,73 @@ export default function Eventos() {
                     const horas = partes[0].padStart(2, '0').slice(0, 2);
                     const minutos = partes[1] ? partes[1].padEnd(2, '0').slice(0, 2) : '00';
                     if (parseInt(horas) <= 23 && parseInt(minutos) <= 59) {
-                      setFormData({ ...formData, horario_cumpleanos: `${horas}:${minutos}` });
+                      const horarioCumpleanos = `${horas}:${minutos}`;
+                      const horarioColorin = calcularHorarioColorin(horarioCumpleanos);
+                      setFormData({ 
+                        ...formData, 
+                        horario_cumpleanos: horarioCumpleanos,
+                        horario_colorin: horarioColorin
+                      });
                     }
                   }
                 }}
                 placeholder="HH:MM (ej: 14:30)"
                 pattern="^([0-1][0-9]|2[0-3]):[0-5][0-9]$"
               />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Cantidad de Profes:</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.cantidad_profes}
+              onChange={(e) => setFormData({ ...formData, cantidad_profes: parseInt(e.target.value) || 1 })}
+              placeholder="Ej: 2"
+            />
+          </div>
+          <div className="form-group">
+            <label>Tareas del Evento:</label>
+            <div className="tareas-formulario-container">
+              <div className="tareas-formulario-input">
+                <input
+                  type="text"
+                  value={nuevaTareaFormulario}
+                  onChange={(e) => setNuevaTareaFormulario(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      agregarTareaFormulario();
+                    }
+                  }}
+                  placeholder="Escribe una tarea y presiona Enter o haz clic en ➕"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={agregarTareaFormulario}
+                  disabled={!nuevaTareaFormulario.trim()}
+                >
+                  ➕ Agregar
+                </button>
+              </div>
+              {tareasFormulario.length > 0 && (
+                <div className="tareas-formulario-lista">
+                  {tareasFormulario.map((tarea, index) => (
+                    <div key={index} className="tarea-formulario-item">
+                      <span className="tarea-formulario-texto">✓ {tarea}</span>
+                      <button
+                        type="button"
+                        className="btn-eliminar-tarea"
+                        onClick={() => eliminarTareaFormulario(index)}
+                        title="Eliminar tarea"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
           <div className="form-group">
@@ -1281,7 +1465,16 @@ export default function Eventos() {
                 </div>
 
                 <div className="profesores-asignados-section">
-                  <h4>👥 Profesores Asignados ({profesoresAsignados.length})</h4>
+                  <div className="cantidad-profes-info">
+                    <h4>👥 Profesores Asignados ({profesoresAsignados.length})</h4>
+                    <div className={`cantidad-profes-badge ${profesoresAsignados.length < (eventoDetalle.cantidad_profes || 1) ? 'cantidad-insuficiente' : 'cantidad-suficiente'}`}>
+                      <span className="cantidad-label">Cantidad solicitada:</span>
+                      <span className="cantidad-numero">{eventoDetalle.cantidad_profes || 1}</span>
+                      {profesoresAsignados.length < (eventoDetalle.cantidad_profes || 1) && (
+                        <span className="cantidad-alerta">⚠️ Faltan {((eventoDetalle.cantidad_profes || 1) - profesoresAsignados.length)} profesor(es)</span>
+                      )}
+                    </div>
+                  </div>
                   {profesoresAsignados.length === 0 ? (
                     <div className="sin-profesores">
                       <p>No hay profesores asignados a este evento.</p>
