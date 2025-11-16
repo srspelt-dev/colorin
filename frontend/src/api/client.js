@@ -43,6 +43,15 @@ apiClient.interceptors.response.use(
   }
 );
 
+// Usuarios API
+export const usuariosAPI = {
+  listar: () => apiClient.get('/usuarios/'),
+  obtener: (id) => apiClient.get(`/usuarios/${id}`),
+  crear: (data) => apiClient.post('/usuarios/', data),
+  actualizar: (id, data) => apiClient.put(`/usuarios/${id}`, data),
+  eliminar: (id) => apiClient.delete(`/usuarios/${id}`),
+};
+
 // Auth API
 export const authAPI = {
   login: (username, password) => {

@@ -92,6 +92,15 @@ class UsuarioBase(BaseModel):
 
 class UsuarioCreate(UsuarioBase):
     password: str
+    es_admin: Optional[bool] = False
+
+
+class UsuarioUpdate(BaseModel):
+    username: Optional[str] = None
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    activo: Optional[bool] = None
+    es_admin: Optional[bool] = None
 
 
 class UsuarioLogin(BaseModel):

@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { authAPI } from '../api/client';
 import './Layout.css';
 
@@ -8,6 +8,20 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const username = localStorage.getItem('username');
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    cargarUsuarioActual();
+  }, []);
+
+  const cargarUsuarioActual = async () => {
+    try {
+      const response = await authAPI.me();
+      setCurrentUser(response.data);
+    } catch (error) {
+      console.error('Error cargando usuario actual:', error);
+    }
+  };
   const [passwordData, setPasswordData] = useState({
     password_actual: '',
     password_nueva: '',
@@ -100,6 +114,11 @@ export default function Layout({ children }) {
         <Link to="/tareas" className={isActive('/tareas') ? 'nav-link active' : 'nav-link'}>
           ✅ Tareas
         </Link>
+        {currentUser?.es_admin && (
+          <Link to="/usuarios" className={isActive('/usuarios') ? 'nav-link active' : 'nav-link'}>
+            👤 Usuarios
+          </Link>
+        )}
       </nav>
 
       <main className="main-content">

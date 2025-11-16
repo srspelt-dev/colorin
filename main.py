@@ -68,7 +68,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @app.get("/usuarios/me", response_model=schemas.Usuario)
-def read_users_me(current_user: models.Usuario = Depends(auth.get_current_active_admin)):
+def read_users_me(current_user: models.Usuario = Depends(auth.get_current_active_user)):
     """Obtener información del usuario actual"""
     return current_user
 
@@ -76,7 +76,7 @@ def read_users_me(current_user: models.Usuario = Depends(auth.get_current_active
 @app.put("/usuarios/me/cambiar-password")
 def cambiar_password(
     cambio: schemas.CambiarPassword,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Cambiar la contraseña del usuario actual"""
     db = database.get_database()
@@ -114,19 +114,24 @@ def cambiar_password(
     return {"message": "Contraseña actualizada correctamente"}
 
 
-@app.post("/usuarios/", response_model=schemas.Usuario)
-def create_user(usuario: schemas.UsuarioCreate):
-    """Crear nuevo usuario (solo para configuración inicial - solo si no hay usuarios)"""
+@app.get("/usuarios/", response_model=List[schemas.Usuario])
+def listar_usuarios(current_user = Depends(auth.get_current_active_admin)):
+    """Listar todos los usuarios (solo administradores)"""
     db = database.get_database()
     usuarios_collection = db[models.COLLECTION_USUARIOS]
     
-    # Verificar si ya existe un usuario
-    existing_user = usuarios_collection.find_one()
-    if existing_user:
-        raise HTTPException(
-            status_code=400,
-            detail="Ya existe un usuario. Usa el endpoint /login para acceder."
-        )
+    usuarios = list(usuarios_collection.find().sort("creado_en", -1))
+    return [models.Usuario.to_dict(u) for u in usuarios]
+
+
+@app.post("/usuarios/", response_model=schemas.Usuario)
+def create_user(
+    usuario: schemas.UsuarioCreate,
+    current_user = Depends(auth.get_current_active_admin)
+):
+    """Crear nuevo usuario (solo administradores)"""
+    db = database.get_database()
+    usuarios_collection = db[models.COLLECTION_USUARIOS]
     
     # Verificar si el username ya existe
     db_user = usuarios_collection.find_one({"username": usuario.username})
@@ -144,11 +149,84 @@ def create_user(usuario: schemas.UsuarioCreate):
         email=usuario.email,
         hashed_password=hashed_password,
         activo=True,
-        es_admin=True
+        es_admin=usuario.es_admin or False
     )
     result = usuarios_collection.insert_one(user_doc)
     user_doc["_id"] = result.inserted_id
     return models.Usuario.to_dict(user_doc)
+
+
+@app.put("/usuarios/{usuario_id}", response_model=schemas.Usuario)
+def actualizar_usuario(
+    usuario_id: str,
+    usuario: schemas.UsuarioUpdate,
+    current_user = Depends(auth.get_current_active_admin)
+):
+    """Actualizar un usuario (solo administradores)"""
+    db = database.get_database()
+    usuarios_collection = db[models.COLLECTION_USUARIOS]
+    
+    user_id = database.str_to_object_id(usuario_id)
+    db_user = usuarios_collection.find_one({"_id": user_id})
+    
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    update_data = {}
+    
+    if usuario.username is not None:
+        # Verificar si el nuevo username ya existe (excepto para el mismo usuario)
+        existing_user = usuarios_collection.find_one({"username": usuario.username})
+        if existing_user and str(existing_user["_id"]) != usuario_id:
+            raise HTTPException(status_code=400, detail="El usuario ya existe")
+        update_data["username"] = usuario.username
+    
+    if usuario.email is not None:
+        # Verificar si el nuevo email ya existe (excepto para el mismo usuario)
+        existing_email = usuarios_collection.find_one({"email": usuario.email})
+        if existing_email and str(existing_email["_id"]) != usuario_id:
+            raise HTTPException(status_code=400, detail="El email ya está registrado")
+        update_data["email"] = usuario.email
+    
+    if usuario.password is not None:
+        update_data["hashed_password"] = auth.get_password_hash(usuario.password)
+    
+    if usuario.activo is not None:
+        update_data["activo"] = usuario.activo
+    
+    if usuario.es_admin is not None:
+        update_data["es_admin"] = usuario.es_admin
+    
+    if update_data:
+        usuarios_collection.update_one({"_id": user_id}, {"$set": update_data})
+        db_user = usuarios_collection.find_one({"_id": user_id})
+    
+    return models.Usuario.to_dict(db_user)
+
+
+@app.delete("/usuarios/{usuario_id}")
+def eliminar_usuario(
+    usuario_id: str,
+    current_user = Depends(auth.get_current_active_admin)
+):
+    """Eliminar un usuario (solo administradores)"""
+    db = database.get_database()
+    usuarios_collection = db[models.COLLECTION_USUARIOS]
+    
+    user_id = database.str_to_object_id(usuario_id)
+    
+    # No permitir eliminar el propio usuario
+    if str(user_id) == current_user.id:
+        raise HTTPException(status_code=400, detail="No puedes eliminar tu propio usuario")
+    
+    db_user = usuarios_collection.find_one({"_id": user_id})
+    
+    if not db_user:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    
+    usuarios_collection.delete_one({"_id": user_id})
+    
+    return {"message": "Usuario eliminado correctamente"}
 
 
 @app.get("/")
@@ -182,7 +260,7 @@ def crear_profesor(
 @app.get("/profesores/", response_model=List[schemas.Profesor])
 def listar_profesores(
     activo: Optional[bool] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Listar todos los profesores, opcionalmente filtrar por activos"""
     db = database.get_database()
@@ -199,7 +277,7 @@ def listar_profesores(
 @app.get("/profesores/{profesor_id}", response_model=schemas.Profesor)
 def obtener_profesor(
     profesor_id: str,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Obtener un profesor por ID"""
     db = database.get_database()
@@ -302,7 +380,7 @@ def listar_eventos(
     fecha_desde: Optional[date] = None,
     fecha_hasta: Optional[date] = None,
     tipo: Optional[str] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Listar eventos con filtros opcionales"""
     db = database.get_database()
@@ -324,7 +402,7 @@ def listar_eventos(
 
 
 @app.get("/eventos/{evento_id}", response_model=schemas.Evento)
-def obtener_evento(evento_id: str, current_user = Depends(auth.get_current_active_admin)):
+def obtener_evento(evento_id: str, current_user = Depends(auth.get_current_user)):
     """Obtener un evento por ID con sus asignaciones"""
     db = database.get_database()
     eventos_collection = db[models.COLLECTION_EVENTOS]
@@ -440,7 +518,7 @@ def crear_asignacion(asignacion: schemas.AsignacionCreate, current_user = Depend
 def listar_asignaciones(
     profesor_id: Optional[str] = None,
     evento_id: Optional[str] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Listar asignaciones con filtros opcionales"""
     db = database.get_database()
@@ -532,7 +610,7 @@ def crear_asignaciones_multiples(asignaciones: List[schemas.AsignacionCreate], c
 # ========== RECOMENDACIONES Y ASIGNACIÓN MANUAL ==========
 
 @app.get("/eventos/{evento_id}/profesores-recomendados")
-def obtener_profesores_recomendados(evento_id: str, current_user = Depends(auth.get_current_active_admin)):
+def obtener_profesores_recomendados(evento_id: str, current_user = Depends(auth.get_current_user)):
     """Obtener lista de profesores recomendados para un evento, ordenados por cantidad de eventos (menos eventos primero)"""
     db = database.get_database()
     eventos_collection = db[models.COLLECTION_EVENTOS]
@@ -678,7 +756,7 @@ def asignar_automatico(evento_id: str, cantidad_profes: int, current_user = Depe
 def estadisticas_profesores(
     fecha_desde: Optional[date] = None,
     fecha_hasta: Optional[date] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Obtener estadísticas de eventos por profesor"""
     db = database.get_database()
@@ -741,7 +819,7 @@ def eventos_por_profesor(
     profesor_id: str,
     fecha_desde: Optional[date] = None,
     fecha_hasta: Optional[date] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Obtener todos los eventos de un profesor específico"""
     db = database.get_database()
@@ -801,7 +879,7 @@ def eventos_por_profesor(
 
 
 @app.get("/reportes/distribucion-equitativa")
-def distribucion_equitativa(current_user = Depends(auth.get_current_active_admin)):
+def distribucion_equitativa(current_user = Depends(auth.get_current_user)):
     """Mostrar la distribución actual de eventos entre profesores activos"""
     db = database.get_database()
     profesores_collection = db[models.COLLECTION_PROFESORES]
@@ -861,7 +939,7 @@ def distribucion_equitativa(current_user = Depends(auth.get_current_active_admin
 @app.post("/tareas/", response_model=schemas.Tarea)
 def crear_tarea(
     tarea: schemas.TareaCreate,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Crear una nueva tarea para el usuario actual"""
     db = database.get_database()
@@ -884,7 +962,7 @@ def crear_tarea(
 def listar_tareas(
     completada: Optional[bool] = None,
     prioridad: Optional[str] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Listar tareas del usuario actual con filtros opcionales"""
     db = database.get_database()
@@ -908,7 +986,7 @@ def listar_tareas(
 @app.get("/tareas/{tarea_id}", response_model=schemas.Tarea)
 def obtener_tarea(
     tarea_id: str,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Obtener una tarea por ID del usuario actual"""
     db = database.get_database()
@@ -928,7 +1006,7 @@ def obtener_tarea(
 def actualizar_tarea(
     tarea_id: str,
     tarea: schemas.TareaUpdate,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Actualizar una tarea del usuario actual"""
     db = database.get_database()
@@ -963,7 +1041,7 @@ def actualizar_tarea(
 @app.delete("/tareas/{tarea_id}")
 def eliminar_tarea(
     tarea_id: str,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Eliminar una tarea del usuario actual"""
     db = database.get_database()
@@ -984,7 +1062,7 @@ def eliminar_tarea(
 @app.patch("/tareas/{tarea_id}/toggle")
 def toggle_tarea(
     tarea_id: str,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Alternar el estado de completada de una tarea del usuario actual"""
     db = database.get_database()
@@ -1043,7 +1121,7 @@ def crear_tarea_evento(
 def listar_tareas_evento(
     evento_id: str,
     completada: Optional[bool] = None,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_user)
 ):
     """Listar tareas de un evento con filtros opcionales"""
     db = database.get_database()

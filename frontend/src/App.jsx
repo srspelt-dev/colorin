@@ -7,6 +7,7 @@ import Profesores from './pages/Profesores';
 import Eventos from './pages/Eventos';
 import Reportes from './pages/Reportes';
 import Tareas from './pages/Tareas';
+import Usuarios from './pages/Usuarios';
 import './App.css';
 
 function App() {
@@ -60,6 +61,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Tareas />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/usuarios"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <Usuarios />
               </Layout>
             </ProtectedRoute>
           }

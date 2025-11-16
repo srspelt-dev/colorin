@@ -103,6 +103,15 @@ async def get_current_user(
     return UserDict(user)
 
 
+async def get_current_active_user(
+    current_user = Depends(get_current_user)
+):
+    """Verificar que el usuario está activo"""
+    if not current_user.activo:
+        raise HTTPException(status_code=400, detail="Usuario inactivo")
+    return current_user
+
+
 async def get_current_active_admin(
     current_user = Depends(get_current_user)
 ):
