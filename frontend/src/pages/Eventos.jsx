@@ -47,6 +47,7 @@ export default function Eventos() {
   const [profesoresRecomendados, setProfesoresRecomendados] = useState([]);
   const [profesoresSeleccionados, setProfesoresSeleccionados] = useState([]);
   const [cargandoRecomendaciones, setCargandoRecomendaciones] = useState(false);
+  const [busquedaProfesor, setBusquedaProfesor] = useState('');
   const [eventoDetalle, setEventoDetalle] = useState(null);
   const [profesoresAsignados, setProfesoresAsignados] = useState([]);
   const [cargandoDetalle, setCargandoDetalle] = useState(false);
@@ -309,6 +310,7 @@ export default function Eventos() {
       setProfesoresRecomendados(response.data.profesores || []);
       setAsignacionManualModal(eventoId);
       setProfesoresSeleccionados([]);
+      setBusquedaProfesor('');
     } catch (error) {
       console.error('Error cargando recomendaciones:', error);
       alert('Error al cargar profesores recomendados');
@@ -1336,8 +1338,53 @@ export default function Eventos() {
               </div>
             ) : (
               <>
+                {/* Buscador de profesores */}
+                <div className="buscador-profesores">
+                  <input
+                    type="text"
+                    placeholder="🔍 Buscar profesor por nombre..."
+                    value={busquedaProfesor}
+                    onChange={(e) => setBusquedaProfesor(e.target.value)}
+                    className="input-busqueda"
+                  />
+                  {busquedaProfesor && (
+                    <button
+                      className="btn-limpiar-busqueda"
+                      onClick={() => setBusquedaProfesor('')}
+                      title="Limpiar búsqueda"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
                 <div className="profesores-list">
-                  {profesoresRecomendados.map((profesor) => {
+                  {profesoresRecomendados
+                    .filter((profesor) => {
+                      if (!busquedaProfesor.trim()) return true;
+                      return profesor.nombre
+                        .toLowerCase()
+                        .includes(busquedaProfesor.toLowerCase().trim());
+                    })
+                    .length === 0 && busquedaProfesor.trim() ? (
+                      <div className="sin-resultados-busqueda">
+                        <p>🔍 No se encontraron profesores con el nombre "{busquedaProfesor}"</p>
+                        <button
+                          className="btn btn-sm btn-secondary"
+                          onClick={() => setBusquedaProfesor('')}
+                        >
+                          Limpiar búsqueda
+                        </button>
+                      </div>
+                    ) : (
+                      profesoresRecomendados
+                        .filter((profesor) => {
+                          if (!busquedaProfesor.trim()) return true;
+                          return profesor.nombre
+                            .toLowerCase()
+                            .includes(busquedaProfesor.toLowerCase().trim());
+                        })
+                        .map((profesor) => {
                     const estaSeleccionado = profesoresSeleccionados.includes(profesor.profesor_id);
                     const esRecomendado =
                       profesor.recomendado && profesor.total_eventos_futuros === 0;
@@ -1386,7 +1433,8 @@ export default function Eventos() {
                         </div>
                       </div>
                     );
-                  })}
+                  })
+                    )}
                 </div>
 
                 {profesoresSeleccionados.length > 0 && (
@@ -1402,6 +1450,7 @@ export default function Eventos() {
                       setAsignacionManualModal(null);
                       setProfesoresRecomendados([]);
                       setProfesoresSeleccionados([]);
+                      setBusquedaProfesor('');
                     }}
                   >
                     Cancelar
