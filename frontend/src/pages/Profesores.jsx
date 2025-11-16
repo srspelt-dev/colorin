@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { profesoresAPI, asignacionesAPI, eventosAPI } from '../api/client';
+import Loading from '../components/Loading';
 import './Profesores.css';
 
 export default function Profesores() {
@@ -108,7 +109,7 @@ export default function Profesores() {
   };
 
   if (loading) {
-    return <div className="loading">Cargando profesores...</div>;
+    return <Loading text="Cargando profesores..." size="large" />;
   }
 
   const totalProfesores = profesores.length;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { reportesAPI, profesoresAPI } from '../api/client';
+import Loading from '../components/Loading';
 import './Reportes.css';
 
 export default function Reportes() {
@@ -8,15 +9,18 @@ export default function Reportes() {
   const [loading, setLoading] = useState(true);
   const [profesorSeleccionado, setProfesorSeleccionado] = useState(null);
   const [eventosProfe, setEventosProfe] = useState([]);
-
-  useEffect(() => {
-    cargarReportes();
-  }, []);
+  const [fechaDesde, setFechaDesde] = useState('');
+  const [fechaHasta, setFechaHasta] = useState('');
 
   const cargarReportes = async () => {
     try {
+      setLoading(true);
+      const filtros = {};
+      if (fechaDesde) filtros.fecha_desde = fechaDesde;
+      if (fechaHasta) filtros.fecha_hasta = fechaHasta;
+      
       const [statsRes, distRes] = await Promise.all([
-        reportesAPI.estadisticasProfesores(),
+        reportesAPI.estadisticasProfesores(filtros),
         reportesAPI.distribucionEquitativa(),
       ]);
       setEstadisticas(statsRes.data.estadisticas || []);
@@ -29,9 +33,50 @@ export default function Reportes() {
     }
   };
 
+  useEffect(() => {
+    cargarReportes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Recargar reportes cuando cambien los filtros (con debounce)
+  useEffect(() => {
+    // No recargar en la carga inicial
+    if (fechaDesde === '' && fechaHasta === '') return;
+    
+    const timer = setTimeout(() => {
+      cargarReportes();
+    }, 500); // Debounce de 500ms
+    
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fechaDesde, fechaHasta]);
+
+  const aplicarFiltroMes = (mesOffset = 0) => {
+    const hoy = new Date();
+    const año = hoy.getFullYear();
+    const mes = hoy.getMonth() + mesOffset;
+    
+    // Primer día del mes
+    const primerDia = new Date(año, mes, 1);
+    // Último día del mes
+    const ultimoDia = new Date(año, mes + 1, 0);
+    
+    setFechaDesde(primerDia.toISOString().split('T')[0]);
+    setFechaHasta(ultimoDia.toISOString().split('T')[0]);
+  };
+
+  const limpiarFiltros = () => {
+    setFechaDesde('');
+    setFechaHasta('');
+  };
+
   const verEventosProfe = async (profesorId) => {
     try {
-      const response = await reportesAPI.eventosPorProfe(profesorId);
+      const filtros = {};
+      if (fechaDesde) filtros.fecha_desde = fechaDesde;
+      if (fechaHasta) filtros.fecha_hasta = fechaHasta;
+      
+      const response = await reportesAPI.eventosPorProfe(profesorId, filtros);
       setEventosProfe(response.data.eventos || []);
       setProfesorSeleccionado(response.data.profesor);
     } catch (error) {
@@ -40,13 +85,85 @@ export default function Reportes() {
     }
   };
 
+  // Recargar reportes cuando cambien los filtros (solo después de la carga inicial)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (fechaDesde || fechaHasta) {
+        cargarReportes();
+      }
+    }, 300); // Debounce de 300ms
+    
+    return () => clearTimeout(timer);
+  }, [fechaDesde, fechaHasta]);
+
   if (loading) {
-    return <div className="loading">Cargando reportes...</div>;
+    return <Loading text="Cargando reportes..." size="large" />;
   }
 
   return (
     <div className="reportes-page">
       <h2>📈 Reportes y Estadísticas</h2>
+
+      {/* Filtros de fecha */}
+      <div className="filtros-card">
+        <h3>📅 Filtros por Fecha</h3>
+        <div className="filtros-content">
+          <div className="filtros-fechas">
+            <div className="filtro-fecha-item">
+              <label>Desde:</label>
+              <input
+                type="date"
+                value={fechaDesde}
+                onChange={(e) => setFechaDesde(e.target.value)}
+              />
+            </div>
+            <div className="filtro-fecha-item">
+              <label>Hasta:</label>
+              <input
+                type="date"
+                value={fechaHasta}
+                onChange={(e) => setFechaHasta(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="filtros-rapidos">
+            <span className="filtros-label">Filtros rápidos:</span>
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => aplicarFiltroMes(0)}
+            >
+              📅 Mes Actual
+            </button>
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => aplicarFiltroMes(-1)}
+            >
+              📅 Mes Anterior
+            </button>
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={() => aplicarFiltroMes(-2)}
+            >
+              📅 Hace 2 Meses
+            </button>
+            <button
+              className="btn btn-sm btn-secondary"
+              onClick={limpiarFiltros}
+            >
+              🗑️ Limpiar
+            </button>
+          </div>
+          {(fechaDesde || fechaHasta) && (
+            <div className="filtros-activos">
+              <span className="filtro-activo-badge">
+                {fechaDesde && `Desde: ${new Date(fechaDesde).toLocaleDateString('es-ES')}`}
+                {fechaDesde && fechaHasta && ' | '}
+                {fechaHasta && `Hasta: ${new Date(fechaHasta).toLocaleDateString('es-ES')}`}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {distribucion && distribucion.analisis && (
         <div className="reporte-card distribucion-card">

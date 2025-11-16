@@ -46,7 +46,7 @@ export default function Login() {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h1>🎨 Colorin</h1>
+          <h1 className="logo-colorin">🎨 Colorin</h1>
           <p className="login-subtitle">Gestión de Eventos</p>
         </div>
 

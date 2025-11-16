@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { profesoresAPI, eventosAPI, reportesAPI } from '../api/client';
+import Loading from '../components/Loading';
 import './Dashboard.css';
 
 export default function Dashboard() {
@@ -40,7 +41,7 @@ export default function Dashboard() {
   };
 
   if (loading) {
-    return <div className="loading">Cargando...</div>;
+    return <Loading text="Cargando..." size="large" />;
   }
 
   return (

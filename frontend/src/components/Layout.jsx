@@ -65,7 +65,7 @@ export default function Layout({ children }) {
       <header className="header">
         <div className="header-content">
           <div>
-            <h1>🎨 Colorin</h1>
+            <h1 className="logo-colorin">🎨 Colorin</h1>
             <p className="subtitle">Gestión de Eventos</p>
           </div>
           <div className="user-info">

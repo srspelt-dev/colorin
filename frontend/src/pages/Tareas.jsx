@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { tareasAPI } from '../api/client';
+import Loading from '../components/Loading';
 import './Tareas.css';
 
 export default function Tareas() {
@@ -99,7 +100,7 @@ export default function Tareas() {
   };
 
   if (loading) {
-    return <div className="loading">Cargando tareas...</div>;
+    return <Loading text="Cargando tareas..." size="large" />;
   }
 
   const tareasPendientes = tareas.filter((t) => !t.completada);

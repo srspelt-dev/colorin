@@ -694,9 +694,13 @@ def estadisticas_profesores(
     if fecha_desde or fecha_hasta:
         fecha_filter = {}
         if fecha_desde:
-            fecha_filter["$gte"] = fecha_desde
+            # Convertir fecha a string si es un objeto date
+            fecha_desde_str = fecha_desde.isoformat() if isinstance(fecha_desde, date) else fecha_desde
+            fecha_filter["$gte"] = fecha_desde_str
         if fecha_hasta:
-            fecha_filter["$lte"] = fecha_hasta
+            # Convertir fecha a string si es un objeto date
+            fecha_hasta_str = fecha_hasta.isoformat() if isinstance(fecha_hasta, date) else fecha_hasta
+            fecha_filter["$lte"] = fecha_hasta_str
         evento_filter["fecha"] = fecha_filter
     
     eventos = list(eventos_collection.find(evento_filter))
@@ -759,9 +763,13 @@ def eventos_por_profesor(
     if fecha_desde or fecha_hasta:
         fecha_filter = {}
         if fecha_desde:
-            fecha_filter["$gte"] = fecha_desde
+            # Convertir fecha a string si es un objeto date
+            fecha_desde_str = fecha_desde.isoformat() if isinstance(fecha_desde, date) else fecha_desde
+            fecha_filter["$gte"] = fecha_desde_str
         if fecha_hasta:
-            fecha_filter["$lte"] = fecha_hasta
+            # Convertir fecha a string si es un objeto date
+            fecha_hasta_str = fecha_hasta.isoformat() if isinstance(fecha_hasta, date) else fecha_hasta
+            fecha_filter["$lte"] = fecha_hasta_str
         evento_filter["fecha"] = fecha_filter
     
     eventos = list(eventos_collection.find(evento_filter).sort("fecha", 1))

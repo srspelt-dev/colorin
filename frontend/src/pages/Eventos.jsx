@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { eventosAPI, asignacionesAPI, recomendacionesAPI, profesoresAPI, tareasEventoAPI } from '../api/client';
+import Loading from '../components/Loading';
 import './Eventos.css';
 
 export default function Eventos() {
@@ -122,6 +123,7 @@ export default function Eventos() {
       const data = {
         ...formData,
         fecha: formData.fecha,
+        cantidad_profes: formData.cantidad_profes && formData.cantidad_profes > 0 ? formData.cantidad_profes : 1,
       };
       let eventoId;
       if (editingId) {
@@ -526,7 +528,7 @@ export default function Eventos() {
   };
 
   if (loading) {
-    return <div className="loading">Cargando eventos...</div>;
+    return <Loading text="Cargando eventos..." size="large" />;
   }
 
   return (
@@ -788,8 +790,24 @@ export default function Eventos() {
             <input
               type="number"
               min="1"
-              value={formData.cantidad_profes}
-              onChange={(e) => setFormData({ ...formData, cantidad_profes: parseInt(e.target.value) || 1 })}
+              value={formData.cantidad_profes || ''}
+              onChange={(e) => {
+                const valor = e.target.value;
+                if (valor === '') {
+                  setFormData({ ...formData, cantidad_profes: '' });
+                } else {
+                  const num = parseInt(valor);
+                  if (!isNaN(num) && num > 0) {
+                    setFormData({ ...formData, cantidad_profes: num });
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '' || parseInt(e.target.value) < 1) {
+                  setFormData({ ...formData, cantidad_profes: 1 });
+                }
+              }}
+              onFocus={(e) => e.target.select()}
               placeholder="Ej: 2"
             />
           </div>
@@ -1067,8 +1085,24 @@ export default function Eventos() {
             <input
               type="number"
               min="1"
-              value={formData.cantidad_profes}
-              onChange={(e) => setFormData({ ...formData, cantidad_profes: parseInt(e.target.value) || 1 })}
+              value={formData.cantidad_profes || ''}
+              onChange={(e) => {
+                const valor = e.target.value;
+                if (valor === '') {
+                  setFormData({ ...formData, cantidad_profes: '' });
+                } else {
+                  const num = parseInt(valor);
+                  if (!isNaN(num) && num > 0) {
+                    setFormData({ ...formData, cantidad_profes: num });
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '' || parseInt(e.target.value) < 1) {
+                  setFormData({ ...formData, cantidad_profes: 1 });
+                }
+              }}
+              onFocus={(e) => e.target.select()}
               placeholder="Ej: 2"
             />
           </div>
@@ -1297,7 +1331,9 @@ export default function Eventos() {
             </p>
 
             {cargandoRecomendaciones ? (
-              <div className="loading-modal">Cargando profesores...</div>
+              <div className="loading-modal">
+                <Loading text="Cargando profesores..." size="medium" />
+              </div>
             ) : (
               <>
                 <div className="profesores-list">
@@ -1422,7 +1458,9 @@ export default function Eventos() {
             </div>
 
             {cargandoDetalle ? (
-              <div className="loading-modal">Cargando detalles...</div>
+              <div className="loading-modal">
+                <Loading text="Cargando detalles..." size="medium" />
+              </div>
             ) : (
               <>
                 <div className="evento-detalle-info">
@@ -1557,7 +1595,9 @@ export default function Eventos() {
                   )}
 
                   {cargandoTareas ? (
-                    <div className="loading-tareas">Cargando tareas...</div>
+                    <div className="loading-tareas">
+                      <Loading text="Cargando tareas..." size="small" />
+                    </div>
                   ) : tareasEvento.length === 0 ? (
                     <div className="sin-tareas">
                       <p>No hay tareas registradas para este evento.</p>

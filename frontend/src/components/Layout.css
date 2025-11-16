@@ -30,6 +30,31 @@
   font-weight: 700;
 }
 
+.header h1.logo-colorin,
+.logo-colorin {
+  background: linear-gradient(135deg, #ff6b6b 0%, #4ecdc4 25%, #45b7d1 50%, #f9ca24 75%, #ff6b6b 100%) !important;
+  background-size: 200% 200% !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+  background-clip: text !important;
+  animation: gradient-shift 3s ease infinite !important;
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
 .subtitle {
   margin: 0.5rem 0 0 0;
   color: #666;
