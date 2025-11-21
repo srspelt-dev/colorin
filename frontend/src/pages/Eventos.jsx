@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { eventosAPI, asignacionesAPI, recomendacionesAPI, profesoresAPI, tareasEventoAPI } from '../api/client';
 import Loading from '../components/Loading';
+import jsPDF from 'jspdf';
 import './Eventos.css';
 
 export default function Eventos() {
@@ -576,6 +577,153 @@ export default function Eventos() {
       return `${horas}:${minutos}`;
     }
     return hora;
+  };
+
+  const generarPDFEntrega = () => {
+    if (!eventoDetalle) return;
+
+    // Parsear cosas entregadas
+    const cosasEntregadas = eventoDetalle.cosas_entregadas 
+      ? eventoDetalle.cosas_entregadas.split(',').map(c => c.trim()).filter(c => c)
+      : [];
+
+    if (cosasEntregadas.length === 0) {
+      alert('No hay cosas entregadas para generar el PDF');
+      return;
+    }
+
+    // Formatear fecha
+    const fecha = new Date(eventoDetalle.fecha);
+    const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                   'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const fechaFormateada = `${fecha.getDate()} de ${meses[fecha.getMonth()]} de ${fecha.getFullYear()}`;
+
+    // Obtener primer profesor asignado
+    const primerProfe = profesoresAsignados.length > 0 
+      ? profesoresAsignados[0].nombre 
+      : 'Sin asignar';
+
+    // Crear PDF
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    let yPos = margin + 10;
+
+    // Título
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    const titulo = 'ENTREGA DE MATERIALES COLORÍN COLORADO';
+    const tituloWidth = doc.getTextWidth(titulo);
+    doc.text(titulo, (pageWidth - tituloWidth) / 2, yPos);
+    yPos += 20;
+
+    // Información del evento
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    doc.text('EVENTO:', margin, yPos);
+    doc.text(eventoDetalle.nombre, margin + 30, yPos);
+    yPos += 7;
+
+    doc.text('FECHA:', margin, yPos);
+    doc.text(fechaFormateada, margin + 30, yPos);
+    yPos += 7;
+
+    doc.text('PROFE:', margin, yPos);
+    doc.text(primerProfe.toUpperCase(), margin + 30, yPos);
+    yPos += 12;
+
+    // Texto introductorio
+    doc.setFontSize(10);
+    const texto1 = 'Se realiza la entrega de los materiales para el evento';
+    doc.text(texto1, margin, yPos);
+    yPos += 6;
+
+    const texto2 = 'A continuación se da comienzo a la verificación física de los materiales y equipos que a continuación se detallan.';
+    const texto2Lines = doc.splitTextToSize(texto2, pageWidth - 2 * margin);
+    doc.text(texto2Lines, margin, yPos);
+    yPos += texto2Lines.length * 5 + 8;
+
+    // Encabezados de la tabla
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    
+    // Definir posiciones de columnas más precisas
+    const colN = margin;
+    const colMateriales = margin + 12;
+    const colCantidad = pageWidth - margin - 50;
+    const colObservacion = pageWidth - margin - 25;
+
+    doc.text('N°', colN, yPos);
+    doc.text('MATERIALES', colMateriales, yPos);
+    doc.text('CANTIDAD', colCantidad, yPos);
+    doc.text('OBSERVACIÓN', colObservacion, yPos);
+    yPos += 6;
+
+    // Línea debajo de encabezados
+    doc.setLineWidth(0.5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 8;
+
+    // Datos de materiales
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    cosasEntregadas.forEach((cosa, index) => {
+      // Verificar si necesitamos una nueva página
+      if (yPos > pageHeight - 50) {
+        doc.addPage();
+        yPos = margin + 10;
+      }
+
+      // Intentar extraer cantidad y nombre del material
+      const match = cosa.match(/^(\d+)\s+(.+)$/);
+      const cantidad = match ? match[1] : '';
+      const material = match ? match[2] : cosa;
+
+      // Número
+      doc.text((index + 1).toString(), colN, yPos);
+      
+      // Material - puede ser largo, dividirlo en líneas si es necesario
+      const anchoMaterial = colCantidad - colMateriales - 5;
+      const materialLines = doc.splitTextToSize(material, anchoMaterial);
+      doc.text(materialLines, colMateriales, yPos);
+      
+      // Cantidad (alineada a la derecha)
+      if (cantidad) {
+        const cantidadWidth = doc.getTextWidth(cantidad);
+        doc.text(cantidad, colCantidad + 20 - cantidadWidth, yPos);
+      }
+      
+      // Observación vacía
+      doc.text('', colObservacion, yPos);
+
+      // Ajustar yPos según la cantidad de líneas del material
+      const alturaFila = Math.max(materialLines.length * 5, 5);
+      yPos += alturaFila + 2;
+    });
+
+    yPos += 15;
+
+    // Firma
+    if (yPos > pageHeight - 40) {
+      doc.addPage();
+      yPos = margin + 10;
+    }
+    doc.setFontSize(10);
+    doc.text('Firma:', margin, yPos);
+    // Línea para firma
+    doc.setLineWidth(0.5);
+    doc.line(margin + 25, yPos - 1, pageWidth - margin, yPos - 1);
+    yPos += 8;
+    // Línea de guiones para firma
+    const lineaFirma = '_________________________________________________';
+    doc.text(lineaFirma, margin + 25, yPos);
+
+    // Generar nombre del archivo
+    const nombreArchivo = `Entrega_Materiales_${eventoDetalle.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${fecha.getDate()}_${fecha.getMonth() + 1}_${fecha.getFullYear()}.pdf`;
+
+    // Guardar PDF
+    doc.save(nombreArchivo);
   };
 
   const formatearFecha = (fechaString) => {
@@ -2068,6 +2216,15 @@ export default function Eventos() {
                           </div>
                         ))}
                       </div>
+                      <div className="pdf-button-container">
+                        <button
+                          className="btn btn-success btn-pdf-generar"
+                          onClick={generarPDFEntrega}
+                          title="Generar PDF de entrega de materiales para imprimir"
+                        >
+                          📄 Generar PDF de Entrega
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -2122,6 +2279,9 @@ export default function Eventos() {
                       ))}
                     </div>
                   )}
+                </div>
+
+                <div className="evento-acciones-section">
                 </div>
 
                 <div className="tareas-evento-section">

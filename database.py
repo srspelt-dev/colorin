@@ -10,6 +10,7 @@ MONGODB_PASSWORD = os.getenv("MONGODB_PASSWORD", "facilito!23")
 MONGODB_CLUSTER = os.getenv("MONGODB_CLUSTER", "colorin.uukmsjh.mongodb.net")
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "colorin")
 
+
 # Codificar la contraseña y usuario para URL (maneja caracteres especiales)
 encoded_username = quote_plus(MONGODB_USERNAME)
 encoded_password = quote_plus(MONGODB_PASSWORD)

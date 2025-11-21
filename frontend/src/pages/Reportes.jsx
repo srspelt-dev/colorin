@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { reportesAPI, profesoresAPI } from '../api/client';
 import Loading from '../components/Loading';
+import jsPDF from 'jspdf';
 import './Reportes.css';
 
 export default function Reportes() {
