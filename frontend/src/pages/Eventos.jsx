@@ -579,12 +579,15 @@ export default function Eventos() {
     return hora;
   };
 
-  const generarPDFEntrega = () => {
-    if (!eventoDetalle) return;
+  const generarPDFDesdeEvento = (evento, profesoresAsignadosList = []) => {
+    if (!evento || !evento.cosas_entregadas) {
+      alert('No hay cosas entregadas para generar el PDF');
+      return;
+    }
 
     // Parsear cosas entregadas
-    const cosasEntregadas = eventoDetalle.cosas_entregadas 
-      ? eventoDetalle.cosas_entregadas.split(',').map(c => c.trim()).filter(c => c)
+    const cosasEntregadas = evento.cosas_entregadas 
+      ? evento.cosas_entregadas.split(',').map(c => c.trim()).filter(c => c)
       : [];
 
     if (cosasEntregadas.length === 0) {
@@ -592,15 +595,25 @@ export default function Eventos() {
       return;
     }
 
-    // Formatear fecha
-    const fecha = new Date(eventoDetalle.fecha);
+    // Formatear fecha (crear en zona horaria local para evitar problemas de UTC)
+    let fecha;
+    if (typeof evento.fecha === 'string' && evento.fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Si viene como string ISO (YYYY-MM-DD), crear fecha local
+      const [año, mes, dia] = evento.fecha.split('-').map(Number);
+      fecha = new Date(año, mes - 1, dia);
+    } else {
+      // Si es otro formato, crear fecha y luego convertir a local
+      const fechaTemp = new Date(evento.fecha);
+      fecha = new Date(fechaTemp.getFullYear(), fechaTemp.getMonth(), fechaTemp.getDate());
+    }
+    
     const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
                    'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
     const fechaFormateada = `${fecha.getDate()} de ${meses[fecha.getMonth()]} de ${fecha.getFullYear()}`;
 
     // Obtener primer profesor asignado
-    const primerProfe = profesoresAsignados.length > 0 
-      ? profesoresAsignados[0].nombre 
+    const primerProfe = profesoresAsignadosList.length > 0 
+      ? profesoresAsignadosList[0].nombre 
       : 'Sin asignar';
 
     // Crear PDF
@@ -622,7 +635,7 @@ export default function Eventos() {
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
     doc.text('EVENTO:', margin, yPos);
-    doc.text(eventoDetalle.nombre, margin + 30, yPos);
+    doc.text(evento.nombre, margin + 30, yPos);
     yPos += 7;
 
     doc.text('FECHA:', margin, yPos);
@@ -720,10 +733,15 @@ export default function Eventos() {
     doc.text(lineaFirma, margin + 25, yPos);
 
     // Generar nombre del archivo
-    const nombreArchivo = `Entrega_Materiales_${eventoDetalle.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${fecha.getDate()}_${fecha.getMonth() + 1}_${fecha.getFullYear()}.pdf`;
+    const nombreArchivo = `Entrega_Materiales_${evento.nombre.replace(/[^a-zA-Z0-9]/g, '_')}_${fecha.getDate()}_${fecha.getMonth() + 1}_${fecha.getFullYear()}.pdf`;
 
     // Guardar PDF
     doc.save(nombreArchivo);
+  };
+
+  const generarPDFEntrega = () => {
+    if (!eventoDetalle) return;
+    generarPDFDesdeEvento(eventoDetalle, profesoresAsignados);
   };
 
   const formatearFecha = (fechaString) => {
@@ -776,43 +794,84 @@ export default function Eventos() {
     return <Loading text="Cargando eventos..." size="large" />;
   }
 
+  // Debug inicial
+  console.log('Eventos cargados:', eventos.length);
+
   // Función helper para obtener fecha y hora combinadas para ordenamiento
   const obtenerFechaHora = (evento) => {
     if (!evento.fecha) return new Date(0); // Si no hay fecha, poner al inicio
     
-    const fecha = new Date(evento.fecha);
+    // Crear fecha en zona horaria local para evitar problemas de UTC
+    let fecha;
+    if (typeof evento.fecha === 'string' && evento.fecha.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      // Si viene como string ISO (YYYY-MM-DD), crear fecha local
+      const [año, mes, dia] = evento.fecha.split('-').map(Number);
+      fecha = new Date(año, mes - 1, dia);
+    } else {
+      // Si es otro formato, crear fecha y luego convertir a local
+      const fechaTemp = new Date(evento.fecha);
+      fecha = new Date(fechaTemp.getFullYear(), fechaTemp.getMonth(), fechaTemp.getDate());
+    }
     
     // Intentar usar horario_cumpleanos primero, si no existe usar horario_colorin
     const horario = evento.horario_cumpleanos || evento.horario_colorin;
     
     if (horario && horario.includes(':')) {
-      const [horas, minutos] = horario.split(':').map(Number);
-      fecha.setHours(horas || 0, minutos || 0, 0, 0);
+      const partes = horario.split(':');
+      const horas = parseInt(partes[0], 10) || 0;
+      const minutos = parseInt(partes[1], 10) || 0;
+      fecha.setHours(horas, minutos, 0, 0);
     } else {
-      // Si no hay horario, usar mediodía como hora por defecto
-      fecha.setHours(12, 0, 0, 0);
+      // Si no hay horario, usar final del día (23:59:59) para que siempre aparezcan como futuros si son de hoy o futuro
+      fecha.setHours(23, 59, 59, 0);
     }
     
     return fecha;
   };
 
-  // Separar eventos futuros y pasados
-  const hoy = new Date();
-  hoy.setHours(0, 0, 0, 0);
+  // Separar eventos futuros y pasados (considerando fecha Y hora)
+  const ahora = new Date();
   
-  const eventosFuturos = eventos.filter((evento) => {
-    if (!evento.fecha) return false;
-    const fechaEvento = new Date(evento.fecha);
-    fechaEvento.setHours(0, 0, 0, 0);
-    return fechaEvento >= hoy;
+  // Debug: mostrar hora actual
+  console.log('=== DEBUG EVENTOS ===');
+  console.log('Hora actual:', ahora.toLocaleString('es-ES'));
+  console.log('Timestamp actual:', ahora.getTime());
+  console.log('Total eventos a procesar:', eventos.length);
+  
+  const eventosFuturos = [];
+  const eventosPasados = [];
+  
+  eventos.forEach((evento) => {
+    if (!evento.fecha) return;
+    
+    try {
+      const fechaHoraEvento = obtenerFechaHora(evento);
+      const esFuturo = fechaHoraEvento.getTime() > ahora.getTime();
+      
+      // Debug: ver qué está pasando
+      console.log(`Evento: ${evento.nombre}`, {
+        fecha: evento.fecha,
+        horario: evento.horario_cumpleanos || evento.horario_colorin || 'sin horario',
+        fechaHoraEvento: fechaHoraEvento.toLocaleString('es-ES'),
+        timestampEvento: fechaHoraEvento.getTime(),
+        timestampAhora: ahora.getTime(),
+        diferencia: fechaHoraEvento.getTime() - ahora.getTime(),
+        diferenciaHoras: (fechaHoraEvento.getTime() - ahora.getTime()) / (1000 * 60 * 60),
+        esFuturo: esFuturo
+      });
+      
+      if (esFuturo) {
+        eventosFuturos.push(evento);
+      } else {
+        eventosPasados.push(evento);
+      }
+    } catch (error) {
+      console.error('Error procesando evento:', evento.nombre, error);
+    }
   });
-
-  const eventosPasados = eventos.filter((evento) => {
-    if (!evento.fecha) return false;
-    const fechaEvento = new Date(evento.fecha);
-    fechaEvento.setHours(0, 0, 0, 0);
-    return fechaEvento < hoy;
-  });
+  
+  console.log(`Total eventos: ${eventos.length}, Futuros: ${eventosFuturos.length}, Pasados: ${eventosPasados.length}`);
+  console.log('=== FIN DEBUG ===');
 
   // Ordenar eventos futuros por fecha y hora (más cercanos primero)
   eventosFuturos.sort((a, b) => {
@@ -1644,6 +1703,16 @@ export default function Eventos() {
               <div className="evento-cosas-entregadas">
                 <strong>📦 Cosas Entregadas:</strong>
                 <p>{evento.cosas_entregadas}</p>
+                <button
+                  className="btn btn-sm btn-success"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    generarPDFDesdeEvento(evento, evento.profesoresAsignados || []);
+                  }}
+                  title="Generar PDF de entrega de materiales"
+                >
+                  📄 Generar PDF
+                </button>
               </div>
             )}
             {(evento.tareasPendientes?.length > 0 || evento.tareasCompletadas?.length > 0) && (
@@ -1831,6 +1900,16 @@ export default function Eventos() {
                   <div className="evento-cosas-entregadas">
                     <strong>📦 Cosas Entregadas:</strong>
                     <p>{evento.cosas_entregadas}</p>
+                    <button
+                      className="btn btn-sm btn-success"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        generarPDFDesdeEvento(evento, evento.profesoresAsignados || []);
+                      }}
+                      title="Generar PDF de entrega de materiales"
+                    >
+                      📄 Generar PDF
+                    </button>
                   </div>
                 )}
                 {(evento.tareasPendientes?.length > 0 || evento.tareasCompletadas?.length > 0) && (
