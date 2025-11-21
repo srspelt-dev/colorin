@@ -41,6 +41,7 @@ class EventoBase(BaseModel):
     cantidad_profes: Optional[int] = 1  # Cantidad de profesores solicitados para el evento
     mobiliario: Optional[str] = None  # Mobiliario necesario para el evento
     organizador: Optional[str] = None  # Organizador del evento
+    cosas_entregadas: Optional[str] = None  # Materiales/items entregados para el evento
 
 
 class EventoCreate(EventoBase):
@@ -59,6 +60,7 @@ class EventoUpdate(BaseModel):
     cantidad_profes: Optional[int] = None
     mobiliario: Optional[str] = None
     organizador: Optional[str] = None
+    cosas_entregadas: Optional[str] = None
 
 
 class Evento(EventoBase):

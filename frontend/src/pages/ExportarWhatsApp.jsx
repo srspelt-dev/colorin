@@ -191,6 +191,16 @@ export default function ExportarWhatsApp() {
         texto += `•⁠  ⁠Profes:\n`;
       }
       
+      // Mobiliario
+      if (evento.mobiliario) {
+        texto += `•⁠  ⁠Mobiliario: ${evento.mobiliario}\n`;
+      }
+      
+      // Cosas Entregadas
+      if (evento.cosas_entregadas) {
+        texto += `•⁠  ⁠Cosas Entregadas: ${evento.cosas_entregadas}\n`;
+      }
+      
       // Actividades
       if (evento.actividad && Array.isArray(evento.actividad) && evento.actividad.length > 0) {
         texto += `Actividades\n`;

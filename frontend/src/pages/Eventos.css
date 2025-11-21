@@ -420,6 +420,28 @@
   color: #004085;
 }
 
+.evento-cosas-entregadas {
+  background: #f0fff4;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  border-left: 3px solid #28a745;
+}
+
+.evento-cosas-entregadas strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #155724;
+  font-size: 0.9rem;
+}
+
+.evento-cosas-entregadas p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
 .evento-asignaciones {
   margin: 1rem 0;
   padding: 0.75rem;
@@ -1277,6 +1299,19 @@
     width: 100%;
   }
 
+  .cosas-entregadas-input {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .input-cosa-entregada {
+    width: 100%;
+  }
+
+  .cosas-entregadas-input .btn {
+    width: 100%;
+  }
+
   /* Profesores asignados en móvil */
   .evento-profesores-header {
     flex-direction: column;
@@ -1366,6 +1401,89 @@
 }
 
 .btn-eliminar-tarea:hover {
+  background: #c82333;
+  transform: scale(1.1);
+}
+
+/* Cosas Entregadas */
+.cosas-entregadas-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cosas-entregadas-input {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.input-cosa-entregada {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: border-color 0.3s;
+}
+
+.input-cosa-entregada:focus {
+  outline: none;
+  border-color: #4ecdc4;
+  box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.1);
+}
+
+.cosas-entregadas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.cosa-entregada-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  background: #f0fff4;
+  border-radius: 6px;
+  border: 1px solid #c3e6cb;
+  transition: all 0.2s;
+}
+
+.cosa-entregada-item:hover {
+  border-color: #28a745;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+}
+
+.cosa-entregada-texto {
+  flex: 1;
+  color: #155724;
+  font-size: 0.95rem;
+}
+
+.btn-eliminar-cosa {
+  background: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-eliminar-cosa:hover {
   background: #c82333;
   transform: scale(1.1);
 }

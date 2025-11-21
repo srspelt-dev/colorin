@@ -35,6 +35,7 @@ export default function Eventos() {
     cantidad_profes: 1,
     mobiliario: '',
     organizador: '',
+    cosas_entregadas: '',
   });
   const [actividadPersonalizada, setActividadPersonalizada] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -44,6 +45,8 @@ export default function Eventos() {
   const [mostrarFormTarea, setMostrarFormTarea] = useState(false);
   const [tareasFormulario, setTareasFormulario] = useState([]); // Tareas temporales en el formulario
   const [nuevaTareaFormulario, setNuevaTareaFormulario] = useState(''); // Nueva tarea en el formulario
+  const [cosasEntregadasLista, setCosasEntregadasLista] = useState([]); // Lista de cosas entregadas
+  const [nuevaCosaEntregada, setNuevaCosaEntregada] = useState(''); // Nueva cosa entregada
   const [asignacionModal, setAsignacionModal] = useState(null);
   const [asignacionManualModal, setAsignacionManualModal] = useState(null);
   const [cantidadProfes, setCantidadProfes] = useState(1);
@@ -144,10 +147,16 @@ export default function Eventos() {
     setSubmitting(true);
     
     try {
+      // Convertir lista de cosas entregadas a string separado por comas
+      const cosasEntregadasTexto = cosasEntregadasLista.length > 0 
+        ? cosasEntregadasLista.join(', ') 
+        : null;
+
       const data = {
         ...formData,
         fecha: formData.fecha,
         cantidad_profes: formData.cantidad_profes && formData.cantidad_profes > 0 ? formData.cantidad_profes : 1,
+        cosas_entregadas: cosasEntregadasTexto,
       };
       let eventoId;
       if (editingId) {
@@ -204,10 +213,13 @@ export default function Eventos() {
         cantidad_profes: 1,
         mobiliario: '',
         organizador: '',
+        cosas_entregadas: '',
       });
       setActividadPersonalizada('');
       setTareasFormulario([]);
       setNuevaTareaFormulario('');
+      setCosasEntregadasLista([]);
+      setNuevaCosaEntregada('');
       setEditingId(null);
       cargarEventos();
     } catch (error) {
@@ -262,12 +274,22 @@ export default function Eventos() {
       cantidad_profes: evento.cantidad_profes || 1,
       mobiliario: evento.mobiliario || '',
       organizador: evento.organizador || '',
+      cosas_entregadas: evento.cosas_entregadas || '',
     });
     setActividadPersonalizada(textoOtros);
     setEditingId(evento.id);
     
     // Cargar tareas existentes del evento
     cargarTareasParaEdicion(evento.id);
+    
+    // Cargar cosas entregadas como lista
+    if (evento.cosas_entregadas) {
+      // Si está separado por comas, dividir en lista
+      const cosasLista = evento.cosas_entregadas.split(',').map(c => c.trim()).filter(c => c);
+      setCosasEntregadasLista(cosasLista);
+    } else {
+      setCosasEntregadasLista([]);
+    }
     
     setShowForm(true);
   };
@@ -292,6 +314,17 @@ export default function Eventos() {
 
   const eliminarTareaFormulario = (index) => {
     setTareasFormulario(tareasFormulario.filter((_, i) => i !== index));
+  };
+
+  const agregarCosaEntregada = () => {
+    if (nuevaCosaEntregada.trim()) {
+      setCosasEntregadasLista([...cosasEntregadasLista, nuevaCosaEntregada.trim()]);
+      setNuevaCosaEntregada('');
+    }
+  };
+
+  const eliminarCosaEntregada = (index) => {
+    setCosasEntregadasLista(cosasEntregadasLista.filter((_, i) => i !== index));
   };
 
   const toggleActividad = (actividad) => {
@@ -711,12 +744,14 @@ export default function Eventos() {
                     cantidad_profes: 1,
                   });
                   setActividadPersonalizada('');
-                  setTareasFormulario([]);
-                  setNuevaTareaFormulario('');
-                }}
-              >
-                ✕
-              </button>
+                    setTareasFormulario([]);
+                    setNuevaTareaFormulario('');
+                    setCosasEntregadasLista([]);
+                    setNuevaCosaEntregada('');
+                  }}
+                >
+                  ✕
+                </button>
             </div>
             <form onSubmit={handleSubmit}>
           <div className="form-group">
@@ -997,6 +1032,50 @@ export default function Eventos() {
               onChange={(e) => setFormData({ ...formData, organizador: e.target.value })}
               placeholder="Ej: The Vow, Eventos ABC..."
             />
+          </div>
+          <div className="form-group">
+            <label>📦 Cosas Entregadas:</label>
+            <div className="cosas-entregadas-container">
+              <div className="cosas-entregadas-input">
+                <input
+                  type="text"
+                  value={nuevaCosaEntregada}
+                  onChange={(e) => setNuevaCosaEntregada(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      agregarCosaEntregada();
+                    }
+                  }}
+                  placeholder="Ej: 40 lienzos, 40 peluches, 3 colores batas..."
+                  className="input-cosa-entregada"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={agregarCosaEntregada}
+                >
+                  ➕ Agregar
+                </button>
+              </div>
+              {cosasEntregadasLista.length > 0 && (
+                <div className="cosas-entregadas-lista">
+                  {cosasEntregadasLista.map((cosa, index) => (
+                    <div key={index} className="cosa-entregada-item">
+                      <span className="cosa-entregada-texto">{cosa}</span>
+                      <button
+                        type="button"
+                        className="btn-eliminar-cosa"
+                        onClick={() => eliminarCosaEntregada(index)}
+                        title="Eliminar"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
               <div className="modal-actions">
                 <button
@@ -1311,6 +1390,50 @@ export default function Eventos() {
               placeholder="Ej: The Vow, Eventos ABC..."
             />
           </div>
+          <div className="form-group">
+            <label>📦 Cosas Entregadas:</label>
+            <div className="cosas-entregadas-container">
+              <div className="cosas-entregadas-input">
+                <input
+                  type="text"
+                  value={nuevaCosaEntregada}
+                  onChange={(e) => setNuevaCosaEntregada(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      agregarCosaEntregada();
+                    }
+                  }}
+                  placeholder="Ej: 40 lienzos, 40 peluches, 3 colores batas..."
+                  className="input-cosa-entregada"
+                />
+                <button
+                  type="button"
+                  className="btn btn-sm btn-primary"
+                  onClick={agregarCosaEntregada}
+                >
+                  ➕ Agregar
+                </button>
+              </div>
+              {cosasEntregadasLista.length > 0 && (
+                <div className="cosas-entregadas-lista">
+                  {cosasEntregadasLista.map((cosa, index) => (
+                    <div key={index} className="cosa-entregada-item">
+                      <span className="cosa-entregada-texto">{cosa}</span>
+                      <button
+                        type="button"
+                        className="btn-eliminar-cosa"
+                        onClick={() => eliminarCosaEntregada(index)}
+                        title="Eliminar"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
           <button type="submit" className="btn btn-primary" disabled={submitting}>
             {submitting ? '⏳ Creando...' : '➕ Crear Evento'}
           </button>
@@ -1367,6 +1490,12 @@ export default function Eventos() {
             {evento.organizador && (
               <div className="evento-organizador">
                 <strong>👤 Organizador:</strong> {evento.organizador}
+              </div>
+            )}
+            {evento.cosas_entregadas && (
+              <div className="evento-cosas-entregadas">
+                <strong>📦 Cosas Entregadas:</strong>
+                <p>{evento.cosas_entregadas}</p>
               </div>
             )}
             {(evento.tareasPendientes?.length > 0 || evento.tareasCompletadas?.length > 0) && (
@@ -1548,6 +1677,12 @@ export default function Eventos() {
                 {evento.organizador && (
                   <div className="evento-organizador">
                     <strong>👤 Organizador:</strong> {evento.organizador}
+                  </div>
+                )}
+                {evento.cosas_entregadas && (
+                  <div className="evento-cosas-entregadas">
+                    <strong>📦 Cosas Entregadas:</strong>
+                    <p>{evento.cosas_entregadas}</p>
                   </div>
                 )}
                 {(evento.tareasPendientes?.length > 0 || evento.tareasCompletadas?.length > 0) && (

@@ -80,7 +80,7 @@ class Evento:
                horario_colorin: Optional[str] = None, horario_cumpleanos: Optional[str] = None,
                actividad: Optional[list] = None, notas: Optional[str] = None,
                cantidad_profes: Optional[int] = 1, mobiliario: Optional[str] = None,
-               organizador: Optional[str] = None) -> Dict[str, Any]:
+               organizador: Optional[str] = None, cosas_entregadas: Optional[str] = None) -> Dict[str, Any]:
         """Crear un documento de evento"""
         return {
             "nombre": nombre,
@@ -93,7 +93,8 @@ class Evento:
             "notas": notas,
             "cantidad_profes": cantidad_profes or 1,
             "mobiliario": mobiliario,
-            "organizador": organizador
+            "organizador": organizador,
+            "cosas_entregadas": cosas_entregadas
         }
     
     @staticmethod

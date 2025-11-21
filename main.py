@@ -370,7 +370,8 @@ def crear_evento(
         notas=evento.notas,
         cantidad_profes=evento.cantidad_profes,
         mobiliario=evento.mobiliario,
-        organizador=evento.organizador
+        organizador=evento.organizador,
+        cosas_entregadas=evento.cosas_entregadas
     )
     result = eventos_collection.insert_one(evento_doc)
     evento_doc["_id"] = result.inserted_id
@@ -452,6 +453,8 @@ def actualizar_evento(evento_id: str, evento: schemas.EventoUpdate, current_user
         update_data["mobiliario"] = evento.mobiliario
     if evento.organizador is not None:
         update_data["organizador"] = evento.organizador
+    if evento.cosas_entregadas is not None:
+        update_data["cosas_entregadas"] = evento.cosas_entregadas
     
     if update_data:
         eventos_collection.update_one({"_id": evento_id_obj}, {"$set": update_data})
