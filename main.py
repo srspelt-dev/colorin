@@ -350,7 +350,7 @@ def eliminar_profesor(
 @app.post("/eventos/", response_model=schemas.Evento)
 def crear_evento(
     evento: schemas.EventoCreate,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Crear un nuevo evento"""
     db = database.get_database()
@@ -418,7 +418,7 @@ def obtener_evento(evento_id: str, current_user = Depends(auth.get_current_user)
 
 
 @app.put("/eventos/{evento_id}", response_model=schemas.Evento)
-def actualizar_evento(evento_id: str, evento: schemas.EventoUpdate, current_user = Depends(auth.get_current_active_admin)):
+def actualizar_evento(evento_id: str, evento: schemas.EventoUpdate, current_user = Depends(auth.get_current_active_user)):
     """Actualizar un evento"""
     db = database.get_database()
     eventos_collection = db[models.COLLECTION_EVENTOS]
@@ -485,7 +485,7 @@ def eliminar_evento(evento_id: str, current_user = Depends(auth.get_current_acti
 # ========== ENDPOINTS DE ASIGNACIONES ==========
 
 @app.post("/asignaciones/", response_model=schemas.Asignacion)
-def crear_asignacion(asignacion: schemas.AsignacionCreate, current_user = Depends(auth.get_current_active_admin)):
+def crear_asignacion(asignacion: schemas.AsignacionCreate, current_user = Depends(auth.get_current_active_user)):
     """Asignar un profesor a un evento"""
     db = database.get_database()
     profesores_collection = db[models.COLLECTION_PROFESORES]
@@ -544,7 +544,7 @@ def listar_asignaciones(
 
 
 @app.delete("/asignaciones/{asignacion_id}")
-def eliminar_asignacion(asignacion_id: str, current_user = Depends(auth.get_current_active_admin)):
+def eliminar_asignacion(asignacion_id: str, current_user = Depends(auth.get_current_active_user)):
     """Eliminar una asignación"""
     db = database.get_database()
     asignaciones_collection = db[models.COLLECTION_ASIGNACIONES]
@@ -559,7 +559,7 @@ def eliminar_asignacion(asignacion_id: str, current_user = Depends(auth.get_curr
 
 
 @app.post("/asignaciones/multiples")
-def crear_asignaciones_multiples(asignaciones: List[schemas.AsignacionCreate], current_user = Depends(auth.get_current_active_admin)):
+def crear_asignaciones_multiples(asignaciones: List[schemas.AsignacionCreate], current_user = Depends(auth.get_current_active_user)):
     """Asignar múltiples profesores a eventos"""
     db = database.get_database()
     profesores_collection = db[models.COLLECTION_PROFESORES]
@@ -684,7 +684,7 @@ def obtener_profesores_recomendados(evento_id: str, current_user = Depends(auth.
 # ========== ASIGNACIÓN AUTOMÁTICA EQUITATIVA ==========
 
 @app.post("/eventos/{evento_id}/asignar-automatico")
-def asignar_automatico(evento_id: str, cantidad_profes: int, current_user = Depends(auth.get_current_active_admin)):
+def asignar_automatico(evento_id: str, cantidad_profes: int, current_user = Depends(auth.get_current_active_user)):
     """Asignar profesores a un evento de manera equitativa"""
     db = database.get_database()
     eventos_collection = db[models.COLLECTION_EVENTOS]
@@ -1103,7 +1103,7 @@ def toggle_tarea(
 def crear_tarea_evento(
     evento_id: str,
     tarea: schemas.TareaEventoBase,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Crear una nueva tarea para un evento"""
     db = database.get_database()
@@ -1160,7 +1160,7 @@ def actualizar_tarea_evento(
     evento_id: str,
     tarea_id: str,
     tarea: schemas.TareaEventoUpdate,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Actualizar una tarea de un evento"""
     db = database.get_database()
@@ -1203,7 +1203,7 @@ def actualizar_tarea_evento(
 def eliminar_tarea_evento(
     evento_id: str,
     tarea_id: str,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Eliminar una tarea de un evento"""
     db = database.get_database()
@@ -1232,7 +1232,7 @@ def eliminar_tarea_evento(
 def toggle_tarea_evento(
     evento_id: str,
     tarea_id: str,
-    current_user = Depends(auth.get_current_active_admin)
+    current_user = Depends(auth.get_current_active_user)
 ):
     """Alternar el estado de completada de una tarea de un evento"""
     db = database.get_database()
