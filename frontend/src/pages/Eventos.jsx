@@ -2046,6 +2046,30 @@ export default function Eventos() {
                       <p className="detalle-value">{eventoDetalle.notas}</p>
                     </div>
                   )}
+                  {eventoDetalle.mobiliario && (
+                    <div className="detalle-item detalle-mobiliario">
+                      <span className="detalle-label">🪑 Mobiliario:</span>
+                      <p className="detalle-value">{eventoDetalle.mobiliario}</p>
+                    </div>
+                  )}
+                  {eventoDetalle.organizador && (
+                    <div className="detalle-item detalle-organizador">
+                      <span className="detalle-label">👤 Organizador:</span>
+                      <p className="detalle-value">{eventoDetalle.organizador}</p>
+                    </div>
+                  )}
+                  {eventoDetalle.cosas_entregadas && (
+                    <div className="detalle-item detalle-cosas-entregadas">
+                      <span className="detalle-label">📦 Cosas Entregadas:</span>
+                      <div className="detalle-value">
+                        {eventoDetalle.cosas_entregadas.split(',').map((cosa, index) => (
+                          <div key={index} className="cosa-entregada-detalle-item">
+                            • {cosa.trim()}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="profesores-asignados-section">

@@ -936,6 +936,27 @@
   white-space: pre-wrap;
 }
 
+.detalle-mobiliario {
+  background: #fff8e6;
+  border-left: 3px solid #d4c5b9;
+}
+
+.detalle-organizador {
+  background: #e7f3ff;
+  border-left: 3px solid #4ecdc4;
+}
+
+.detalle-cosas-entregadas {
+  background: #f0fff4;
+  border-left: 3px solid #28a745;
+}
+
+.cosa-entregada-detalle-item {
+  padding: 0.25rem 0;
+  color: #155724;
+  font-size: 0.95rem;
+}
+
 .profesores-asignados-section {
   margin-bottom: 2rem;
 }
