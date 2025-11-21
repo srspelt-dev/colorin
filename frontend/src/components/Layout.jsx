@@ -115,9 +115,14 @@ export default function Layout({ children }) {
           ✅ Tareas
         </Link>
         {currentUser?.es_admin && (
-          <Link to="/usuarios" className={isActive('/usuarios') ? 'nav-link active' : 'nav-link'}>
-            👤 Usuarios
-          </Link>
+          <>
+            <Link to="/usuarios" className={isActive('/usuarios') ? 'nav-link active' : 'nav-link'}>
+              👤 Usuarios
+            </Link>
+            <Link to="/exportar-whatsapp" className={isActive('/exportar-whatsapp') ? 'nav-link active' : 'nav-link'}>
+              📱 Exportar WhatsApp
+            </Link>
+          </>
         )}
       </nav>
 

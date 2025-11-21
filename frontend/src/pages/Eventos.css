@@ -23,6 +23,51 @@
   border: 2px solid #d4c5b9;
 }
 
+.evento-card.evento-completado {
+  opacity: 0.7;
+  background: #f8f9fa;
+  border-left: 4px solid #999;
+}
+
+.evento-card.evento-completado:hover {
+  opacity: 0.85;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+  border-left-color: #666;
+}
+
+.eventos-completados-header {
+  margin-top: 3rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.eventos-completados-header h3 {
+  margin: 0 0 0.5rem 0;
+  color: #666;
+  font-size: 1.5rem;
+}
+
+.eventos-completados-subtitle {
+  margin: 0;
+  color: #999;
+  font-size: 0.9rem;
+}
+
+.eventos-completados {
+  margin-top: 1rem;
+}
+
+.badge-completado {
+  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  color: #155724;
+  font-weight: 600;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.85rem;
+}
+
 .evento-header {
   display: flex;
   justify-content: space-between;
@@ -250,6 +295,129 @@
   background: #fff8e6;
   border-radius: 8px;
   border-left: 4px solid #d4c5b9;
+}
+
+.evento-tareas-container {
+  margin: 0.75rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.evento-tareas-pendientes {
+  background: #f0f8ff;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 3px solid #4ecdc4;
+}
+
+.evento-tareas-completadas {
+  background: #f0fff4;
+  padding: 1rem;
+  border-radius: 8px;
+  border-left: 3px solid #4ecdc4;
+  opacity: 0.85;
+}
+
+.evento-tareas-header {
+  margin-bottom: 0.5rem;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.evento-tareas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.evento-tarea-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: white;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #555;
+  transition: all 0.2s;
+}
+
+.evento-tarea-item:hover {
+  background: #f8f9fa;
+  transform: translateX(2px);
+}
+
+.evento-tarea-item.evento-tarea-completada {
+  opacity: 0.7;
+}
+
+.evento-tarea-item.evento-tarea-completada .evento-tarea-texto {
+  text-decoration: line-through;
+  color: #999;
+}
+
+.evento-tarea-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+  accent-color: #4ecdc4;
+}
+
+.evento-tarea-icon {
+  color: #4ecdc4;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.evento-tarea-texto {
+  flex: 1;
+  user-select: none;
+}
+
+.evento-tarea-mas {
+  padding: 0.5rem;
+  text-align: center;
+  color: #999;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+.evento-mobiliario {
+  background: #fff8e6;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  border-left: 3px solid #d4c5b9;
+}
+
+.evento-mobiliario strong {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: #856404;
+  font-size: 0.9rem;
+}
+
+.evento-mobiliario p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.evento-organizador {
+  background: #e7f3ff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  margin: 0.75rem 0;
+  border-left: 3px solid #4ecdc4;
+  color: #004085;
+  font-size: 0.9rem;
+}
+
+.evento-organizador strong {
+  color: #004085;
 }
 
 .evento-asignaciones {

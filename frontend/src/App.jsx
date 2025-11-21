@@ -8,6 +8,7 @@ import Eventos from './pages/Eventos';
 import Reportes from './pages/Reportes';
 import Tareas from './pages/Tareas';
 import Usuarios from './pages/Usuarios';
+import ExportarWhatsApp from './pages/ExportarWhatsApp';
 import './App.css';
 
 function App() {
@@ -71,6 +72,16 @@ function App() {
             <ProtectedRoute>
               <Layout>
                 <Usuarios />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exportar-whatsapp"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <ExportarWhatsApp />
               </Layout>
             </ProtectedRoute>
           }

@@ -6,6 +6,7 @@ import './Eventos.css';
 export default function Eventos() {
   const [eventos, setEventos] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const actividadesDisponibles = [
     'Slime',
@@ -32,6 +33,8 @@ export default function Eventos() {
     actividad: [],
     notas: '',
     cantidad_profes: 1,
+    mobiliario: '',
+    organizador: '',
   });
   const [actividadPersonalizada, setActividadPersonalizada] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -99,13 +102,28 @@ export default function Eventos() {
               })
             );
             
+            // Cargar todas las tareas del evento
+            let tareasPendientes = [];
+            let tareasCompletadas = [];
+            let tareasResponse = null;
+            try {
+              tareasResponse = await tareasEventoAPI.listar(evento.id);
+              tareasPendientes = tareasResponse.data.filter(t => !t.completada);
+              tareasCompletadas = tareasResponse.data.filter(t => t.completada);
+            } catch (error) {
+              console.error(`Error cargando tareas del evento ${evento.id}:`, error);
+            }
+            
             return { 
               ...evento, 
               asignaciones: asignaciones,
-              profesoresAsignados: profesoresAsignados.filter(p => p !== null)
+              profesoresAsignados: profesoresAsignados.filter(p => p !== null),
+              tareasPendientes: tareasPendientes,
+              tareasCompletadas: tareasCompletadas,
+              todasLasTareas: tareasResponse?.data || []
             };
           } catch {
-            return { ...evento, asignaciones: [], profesoresAsignados: [] };
+            return { ...evento, asignaciones: [], profesoresAsignados: [], tareasPendientes: [] };
           }
         })
       );
@@ -120,6 +138,11 @@ export default function Eventos() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Prevenir doble envío
+    if (submitting) return;
+    setSubmitting(true);
+    
     try {
       const data = {
         ...formData,
@@ -130,18 +153,42 @@ export default function Eventos() {
       if (editingId) {
         await eventosAPI.actualizar(editingId, data);
         eventoId = editingId;
+        
+        // Al editar, obtener tareas existentes y sincronizar
+        const tareasExistentes = await tareasEventoAPI.listar(eventoId);
+        const tareasExistentesDescripciones = tareasExistentes.data.map(t => t.descripcion);
+        
+        // Eliminar tareas que ya no están en el formulario
+        const tareasAEliminar = tareasExistentes.data.filter(
+          t => !tareasFormulario.includes(t.descripcion)
+        );
+        await Promise.all(
+          tareasAEliminar.map(t => tareasEventoAPI.eliminar(eventoId, t.id))
+        );
+        
+        // Crear solo las tareas nuevas que no existen
+        const tareasNuevas = tareasFormulario.filter(
+          t => !tareasExistentesDescripciones.includes(t)
+        );
+        if (tareasNuevas.length > 0) {
+          await Promise.all(
+            tareasNuevas.map(tarea => 
+              tareasEventoAPI.crear(eventoId, { descripcion: tarea })
+            )
+          );
+        }
       } else {
         const response = await eventosAPI.crear(data);
         eventoId = response.data.id;
-      }
-      
-      // Crear las tareas del formulario
-      if (tareasFormulario.length > 0) {
-        await Promise.all(
-          tareasFormulario.map(tarea => 
-            tareasEventoAPI.crear(eventoId, { descripcion: tarea })
-          )
-        );
+        
+        // Crear las tareas del formulario solo para eventos nuevos
+        if (tareasFormulario.length > 0) {
+          await Promise.all(
+            tareasFormulario.map(tarea => 
+              tareasEventoAPI.crear(eventoId, { descripcion: tarea })
+            )
+          );
+        }
       }
       
       setShowForm(false);
@@ -155,6 +202,8 @@ export default function Eventos() {
         actividad: [],
         notas: '',
         cantidad_profes: 1,
+        mobiliario: '',
+        organizador: '',
       });
       setActividadPersonalizada('');
       setTareasFormulario([]);
@@ -164,6 +213,8 @@ export default function Eventos() {
     } catch (error) {
       console.error('Error guardando evento:', error);
       alert(error.response?.data?.detail || 'Error al guardar evento');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -209,6 +260,8 @@ export default function Eventos() {
       actividad: actividadArray,
       notas: evento.notas || '',
       cantidad_profes: evento.cantidad_profes || 1,
+      mobiliario: evento.mobiliario || '',
+      organizador: evento.organizador || '',
     });
     setActividadPersonalizada(textoOtros);
     setEditingId(evento.id);
@@ -428,11 +481,20 @@ export default function Eventos() {
     }
   };
 
-  const handleToggleTareaEvento = async (tareaId) => {
-    if (!eventoDetalle) return;
+  const handleToggleTareaEvento = async (tareaId, eventoId = null) => {
+    const idEvento = eventoId || eventoDetalle?.id;
+    if (!idEvento) return;
+    
     try {
-      await tareasEventoAPI.toggle(eventoDetalle.id, tareaId);
-      cargarTareasEvento(eventoDetalle.id);
+      await tareasEventoAPI.toggle(idEvento, tareaId);
+      
+      // Si estamos en el detalle, recargar tareas del detalle
+      if (eventoDetalle && idEvento === eventoDetalle.id) {
+        cargarTareasEvento(eventoDetalle.id);
+      }
+      
+      // Recargar eventos para actualizar la lista
+      cargarEventos();
     } catch (error) {
       console.error('Error cambiando estado de tarea:', error);
       alert('Error al cambiar el estado de la tarea');
@@ -532,6 +594,58 @@ export default function Eventos() {
   if (loading) {
     return <Loading text="Cargando eventos..." size="large" />;
   }
+
+  // Función helper para obtener fecha y hora combinadas para ordenamiento
+  const obtenerFechaHora = (evento) => {
+    if (!evento.fecha) return new Date(0); // Si no hay fecha, poner al inicio
+    
+    const fecha = new Date(evento.fecha);
+    
+    // Intentar usar horario_cumpleanos primero, si no existe usar horario_colorin
+    const horario = evento.horario_cumpleanos || evento.horario_colorin;
+    
+    if (horario && horario.includes(':')) {
+      const [horas, minutos] = horario.split(':').map(Number);
+      fecha.setHours(horas || 0, minutos || 0, 0, 0);
+    } else {
+      // Si no hay horario, usar mediodía como hora por defecto
+      fecha.setHours(12, 0, 0, 0);
+    }
+    
+    return fecha;
+  };
+
+  // Separar eventos futuros y pasados
+  const hoy = new Date();
+  hoy.setHours(0, 0, 0, 0);
+  
+  const eventosFuturos = eventos.filter((evento) => {
+    if (!evento.fecha) return false;
+    const fechaEvento = new Date(evento.fecha);
+    fechaEvento.setHours(0, 0, 0, 0);
+    return fechaEvento >= hoy;
+  });
+
+  const eventosPasados = eventos.filter((evento) => {
+    if (!evento.fecha) return false;
+    const fechaEvento = new Date(evento.fecha);
+    fechaEvento.setHours(0, 0, 0, 0);
+    return fechaEvento < hoy;
+  });
+
+  // Ordenar eventos futuros por fecha y hora (más cercanos primero)
+  eventosFuturos.sort((a, b) => {
+    const fechaHoraA = obtenerFechaHora(a);
+    const fechaHoraB = obtenerFechaHora(b);
+    return fechaHoraA - fechaHoraB;
+  });
+
+  // Ordenar eventos pasados por fecha y hora (más recientes primero)
+  eventosPasados.sort((a, b) => {
+    const fechaHoraA = obtenerFechaHora(a);
+    const fechaHoraB = obtenerFechaHora(b);
+    return fechaHoraB - fechaHoraA;
+  });
 
   return (
     <div className="eventos-page">
@@ -866,6 +980,24 @@ export default function Eventos() {
               placeholder="Información adicional..."
             />
           </div>
+          <div className="form-group">
+            <label>Mobiliario:</label>
+            <textarea
+              value={formData.mobiliario}
+              onChange={(e) => setFormData({ ...formData, mobiliario: e.target.value })}
+              rows="3"
+              placeholder="Ej: Mesas, sillas, manteles, decoración..."
+            />
+          </div>
+          <div className="form-group">
+            <label>Organizador del Evento:</label>
+            <input
+              type="text"
+              value={formData.organizador}
+              onChange={(e) => setFormData({ ...formData, organizador: e.target.value })}
+              placeholder="Ej: The Vow, Eventos ABC..."
+            />
+          </div>
               <div className="modal-actions">
                 <button
                   type="button"
@@ -888,8 +1020,8 @@ export default function Eventos() {
                 >
                   Cancelar
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  💾 Guardar Cambios
+                <button type="submit" className="btn btn-primary" disabled={submitting}>
+                  {submitting ? '⏳ Guardando...' : '💾 Guardar Cambios'}
                 </button>
               </div>
             </form>
@@ -1161,20 +1293,40 @@ export default function Eventos() {
               placeholder="Información adicional..."
             />
           </div>
-          <button type="submit" className="btn btn-primary">
-            ➕ Crear Evento
+          <div className="form-group">
+            <label>Mobiliario:</label>
+            <textarea
+              value={formData.mobiliario}
+              onChange={(e) => setFormData({ ...formData, mobiliario: e.target.value })}
+              rows="3"
+              placeholder="Ej: Mesas, sillas, manteles, decoración..."
+            />
+          </div>
+          <div className="form-group">
+            <label>Organizador del Evento:</label>
+            <input
+              type="text"
+              value={formData.organizador}
+              onChange={(e) => setFormData({ ...formData, organizador: e.target.value })}
+              placeholder="Ej: The Vow, Eventos ABC..."
+            />
+          </div>
+          <button type="submit" className="btn btn-primary" disabled={submitting}>
+            {submitting ? '⏳ Creando...' : '➕ Crear Evento'}
           </button>
         </form>
       )}
 
-      <div className="eventos-list">
-        {eventos.map((evento) => (
-          <div
-            key={evento.id}
-            className="evento-card"
-            onClick={() => verDetalleEvento(evento.id)}
-            style={{ cursor: 'pointer' }}
-          >
+      {/* Eventos Futuros */}
+      {eventosFuturos.length > 0 && (
+        <div className="eventos-list">
+          {eventosFuturos.map((evento) => (
+            <div
+              key={evento.id}
+              className="evento-card"
+              onClick={() => verDetalleEvento(evento.id)}
+              style={{ cursor: 'pointer' }}
+            >
             <div className="evento-header">
               <div>
                 <h3>{evento.nombre}</h3>
@@ -1205,6 +1357,66 @@ export default function Eventos() {
             )}
             {evento.notas && (
               <p className="evento-notas">{evento.notas}</p>
+            )}
+            {evento.mobiliario && (
+              <div className="evento-mobiliario">
+                <strong>🪑 Mobiliario:</strong>
+                <p>{evento.mobiliario}</p>
+              </div>
+            )}
+            {evento.organizador && (
+              <div className="evento-organizador">
+                <strong>👤 Organizador:</strong> {evento.organizador}
+              </div>
+            )}
+            {(evento.tareasPendientes?.length > 0 || evento.tareasCompletadas?.length > 0) && (
+              <div className="evento-tareas-container" onClick={(e) => e.stopPropagation()}>
+                {/* Tareas Pendientes */}
+                {evento.tareasPendientes && evento.tareasPendientes.length > 0 && (
+                  <div className="evento-tareas-pendientes">
+                    <div className="evento-tareas-header">
+                      <strong>📋 Tareas pendientes ({evento.tareasPendientes.length}):</strong>
+                    </div>
+                    <div className="evento-tareas-lista">
+                      {evento.tareasPendientes.map((tarea) => (
+                        <div key={tarea.id} className="evento-tarea-item">
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={() => handleToggleTareaEvento(tarea.id, evento.id)}
+                            className="evento-tarea-checkbox"
+                            title="Marcar como completada"
+                          />
+                          <span className="evento-tarea-texto">{tarea.descripcion}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Tareas Completadas */}
+                {evento.tareasCompletadas && evento.tareasCompletadas.length > 0 && (
+                  <div className="evento-tareas-completadas">
+                    <div className="evento-tareas-header">
+                      <strong>✅ Tareas completadas ({evento.tareasCompletadas.length}):</strong>
+                    </div>
+                    <div className="evento-tareas-lista">
+                      {evento.tareasCompletadas.map((tarea) => (
+                        <div key={tarea.id} className="evento-tarea-item evento-tarea-completada">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => handleToggleTareaEvento(tarea.id, evento.id)}
+                            className="evento-tarea-checkbox"
+                            title="Marcar como pendiente"
+                          />
+                          <span className="evento-tarea-texto">{tarea.descripcion}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             {(() => {
               const profesoresAsignados = evento.profesoresAsignados?.length || 0;
@@ -1278,8 +1490,145 @@ export default function Eventos() {
               </button>
             </div>
           </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {/* Eventos Pasados/Completados */}
+      {eventosPasados.length > 0 && (
+        <>
+          <div className="eventos-completados-header">
+            <h3>✅ Eventos Completados</h3>
+            <p className="eventos-completados-subtitle">
+              Eventos que ya pasaron ({eventosPasados.length})
+            </p>
+          </div>
+          <div className="eventos-list eventos-completados">
+            {eventosPasados.map((evento) => (
+              <div
+                key={evento.id}
+                className="evento-card evento-completado"
+                onClick={() => verDetalleEvento(evento.id)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div className="evento-header">
+                  <div>
+                    <h3>{evento.nombre}</h3>
+                    <p className="evento-fecha">📅 {formatearFecha(evento.fecha)}</p>
+                  </div>
+                  <span className="badge badge-completado">✅ Completado</span>
+                </div>
+                {evento.ubicacion && (
+                  <p className="evento-ubicacion">📍 {evento.ubicacion}</p>
+                )}
+                {evento.actividad && Array.isArray(evento.actividad) && evento.actividad.length > 0 && (
+                  <p className="evento-actividad">
+                    🎨 Actividades: {evento.actividad.map(a => a.startsWith('Otros: ') ? a.replace('Otros: ', '') : a).join(', ')}
+                  </p>
+                )}
+                {evento.actividad && typeof evento.actividad === 'string' && evento.actividad && (
+                  <p className="evento-actividad">🎨 Actividad: {evento.actividad.replace('Otros: ', '')}</p>
+                )}
+                {(evento.horario_colorin || evento.horario_cumpleanos) && (
+                  <div className="evento-horarios">
+                    {evento.horario_colorin && (
+                      <p className="evento-horario">🕐 Horario Colorín: {formatearHora(evento.horario_colorin)}</p>
+                    )}
+                    {evento.horario_cumpleanos && (
+                      <p className="evento-horario">🎂 Horario de Cumpleaños: {formatearHora(evento.horario_cumpleanos)}</p>
+                    )}
+                  </div>
+                )}
+                {evento.mobiliario && (
+                  <div className="evento-mobiliario">
+                    <strong>🪑 Mobiliario:</strong>
+                    <p>{evento.mobiliario}</p>
+                  </div>
+                )}
+                {evento.organizador && (
+                  <div className="evento-organizador">
+                    <strong>👤 Organizador:</strong> {evento.organizador}
+                  </div>
+                )}
+                {(evento.tareasPendientes?.length > 0 || evento.tareasCompletadas?.length > 0) && (
+                  <div className="evento-tareas-container" onClick={(e) => e.stopPropagation()}>
+                    {/* Tareas Pendientes */}
+                    {evento.tareasPendientes && evento.tareasPendientes.length > 0 && (
+                      <div className="evento-tareas-pendientes">
+                        <div className="evento-tareas-header">
+                          <strong>📋 Tareas pendientes ({evento.tareasPendientes.length}):</strong>
+                        </div>
+                        <div className="evento-tareas-lista">
+                          {evento.tareasPendientes.map((tarea) => (
+                            <div key={tarea.id} className="evento-tarea-item">
+                              <input
+                                type="checkbox"
+                                checked={false}
+                                onChange={() => handleToggleTareaEvento(tarea.id, evento.id)}
+                                className="evento-tarea-checkbox"
+                                title="Marcar como completada"
+                              />
+                              <span className="evento-tarea-texto">{tarea.descripcion}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Tareas Completadas */}
+                    {evento.tareasCompletadas && evento.tareasCompletadas.length > 0 && (
+                      <div className="evento-tareas-completadas">
+                        <div className="evento-tareas-header">
+                          <strong>✅ Tareas completadas ({evento.tareasCompletadas.length}):</strong>
+                        </div>
+                        <div className="evento-tareas-lista">
+                          {evento.tareasCompletadas.map((tarea) => (
+                            <div key={tarea.id} className="evento-tarea-item evento-tarea-completada">
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => handleToggleTareaEvento(tarea.id, evento.id)}
+                                className="evento-tarea-checkbox"
+                                title="Marcar como pendiente"
+                              />
+                              <span className="evento-tarea-texto">{tarea.descripcion}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {(() => {
+                  const profesoresAsignados = evento.profesoresAsignados?.length || 0;
+                  return (
+                    <div className="evento-asignaciones">
+                      <div className="evento-profesores-header">
+                        <strong>👥 Profesores asignados: {profesoresAsignados}</strong>
+                      </div>
+                      {evento.profesoresAsignados && evento.profesoresAsignados.length > 0 && (
+                        <div className="profesores-nombres">
+                          {evento.profesoresAsignados.map((profesor) => (
+                            <span key={profesor.asignacion_id} className="profesor-nombre-badge">
+                              {profesor.nombre}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {eventosFuturos.length === 0 && eventosPasados.length === 0 && (
+        <div className="sin-eventos">
+          <p>No hay eventos registrados.</p>
+        </div>
+      )}
 
       {asignacionModal && (
         <div className="modal-overlay" onClick={() => setAsignacionModal(null)}>

@@ -39,6 +39,8 @@ class EventoBase(BaseModel):
     actividad: Optional[List[str]] = None  # Actividades del evento como lista (ej: ["Slime", "Mini cheffs"])
     notas: Optional[str] = None
     cantidad_profes: Optional[int] = 1  # Cantidad de profesores solicitados para el evento
+    mobiliario: Optional[str] = None  # Mobiliario necesario para el evento
+    organizador: Optional[str] = None  # Organizador del evento
 
 
 class EventoCreate(EventoBase):
@@ -55,6 +57,8 @@ class EventoUpdate(BaseModel):
     actividad: Optional[List[str]] = None
     notas: Optional[str] = None
     cantidad_profes: Optional[int] = None
+    mobiliario: Optional[str] = None
+    organizador: Optional[str] = None
 
 
 class Evento(EventoBase):
